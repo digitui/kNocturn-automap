@@ -4,6 +4,8 @@ A native 64-bit replacement for **Novation Automap** and the **Novation Nocturn*
 macOS 12+). Novation's software is 32-bit and stopped working with macOS Catalina; this project rebuilds what it did from scratch,
 so the Nocturn works again, with Ableton Live in particular.
 
+![The Nocturn Automap HUD showing the 8 knobs of a synth in Ableton Live](docs/images/hud.png)
+
 | part | what it does |
 |---|---|
 | **NocturnBridge** (`bridge/`) | User-space USB driver. Talks to the Nocturn directly (no kernel extension) and presents it as MIDI ports called **Nocturn**. Also draws the Automap-style **HUD** and puts a dial icon in the menu bar. |
@@ -47,7 +49,7 @@ Learned layouts are saved per plug-in in `~/Music/Ableton/User Library/Remote Sc
 Click **Configure** on the device in Live and move the controls you want, and they appear on the Nocturn and in the HUD.
 
 ### The HUD
-A floating panel showing the device, page, and the name, value and position of all 8 knobs (plus a learned crossfader).
+A floating panel (pictured at the top of this page) showing the device, page, and the name, value and position of all 8 knobs (plus a learned crossfader).
 The touched knob is highlighted and the learn target is shown in red. It pops up on touch, page change, device change or
 Learn, then fades. Drag it anywhere and it remembers the position. The menu-bar dial icon sets it to *show when touched*,
 *always visible* or *off*.
