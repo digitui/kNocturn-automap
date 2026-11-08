@@ -1,0 +1,14 @@
+# build output
+bridge/NocturnBridge
+wrapper/build/
+build/
+*.o
+# Python
+__pycache__/
+*.pyc
+# runtime files written by the Live script
+live-script/Nocturn/mappings/
+live-script/Nocturn/nocturn_debug.log
+tests/mappings_test/
+# macOS
+.DS_Store

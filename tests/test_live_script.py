@@ -1,0 +1,139 @@
+"""Tests the Live remote script against a small mock of Live's Python API (tests/live_mock)."""
+import os, shutil, sys
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, 'live_mock'))
+sys.path.insert(0, os.path.join(HERE, '..', 'live-script'))
+from _Framework.InputControlElement import SENT
+
+class Param(object):
+    def __init__(self, name, mn=0.0, mx=1.0, q=False, default=None):
+        self.name, self.min, self.max, self.is_quantized = name, mn, mx, q
+        self._v = mn; self.listeners = []; self.is_enabled = True
+        self.default_value = default if default is not None else mn
+    @property
+    def value(self): return self._v
+    @value.setter
+    def value(self, v):
+        assert self.min <= v <= self.max, (self.name, v)
+        self._v = v
+        for cb in list(self.listeners): cb()
+    def add_value_listener(self, cb): self.listeners.append(cb)
+    def remove_value_listener(self, cb): self.listeners.remove(cb)
+    def __str__(self): return '%.2f' % self._v
+
+class Device(object):
+    def __init__(self, name, n, cls='PluginDevice'):
+        self.name = name; self.class_name = cls; self.class_display_name = name
+        self.parameters = [Param('Device On')] + [Param('%s P%d' % (name, i)) for i in range(n)]
+        self.pl = []
+    def add_parameters_listener(self, cb): self.pl.append(cb)
+    def remove_parameters_listener(self, cb): self.pl.remove(cb)
+
+class TrackView(object): selected_device = None
+class MixerDev(object):
+    def __init__(self): self.volume = Param('Volume', 0.0, 1.0); self.volume._v = 0.85
+class Track(object):
+    _n = 0
+    def __init__(self, devs):
+        Track._n += 1; self.name = 'Track %d' % Track._n; self.mute = False
+        self.devices = devs; self.view = TrackView(); self.mixer_device = MixerDev()
+class SongView(object):
+    def __init__(self, song): self.song = song; self.selected_track = None
+    def select_device(self, d): self.selected_track.view.selected_device = d; self.song.appoint(d)
+class Song(object):
+    def __init__(self, tracks):
+        self.tracks = tracks; self.visible_tracks = tracks; self.return_tracks = []; self.master_track = Track([])
+        self.view = SongView(self); self.view.selected_track = tracks[0]; self.appointed_device = None; self.al = []
+    def add_appointed_device_listener(self, cb): self.al.append(cb)
+    def remove_appointed_device_listener(self, cb): self.al.remove(cb)
+    def appoint(self, d):
+        self.appointed_device = d
+        for cb in self.al: cb()
+
+import Nocturn.Automap as AM
+AM.MAPPING_DIR = os.path.join(HERE, 'mappings_test')
+shutil.rmtree(AM.MAPPING_DIR, ignore_errors=True)
+from Nocturn.Nocturn import Nocturn
+
+serum = Device('Serum', 20); eq = Device('EQ Eight', 5, 'Eq8'); simpler = Device('Simpler', 7, 'OriginalSimpler')
+song = Song([Track([serum, eq]), Track([simpler])])
+s = Nocturn(song); s.tick()
+assert s.midi[0] == (0xF0, 0, 0x20, 0x29, 0x7F, 1, 0, 0xF7)
+def ok(msg): print('ok:', msg)
+
+song.view.select_device(serum); s.tick()
+am = s._automap
+assert am.num_pages == 3 and s._encoders[0].mapped is serum.parameters[1]; ok('plug-in params paged: 20 params -> 3 pages, knob1 = P0')
+s._top_buttons[2].receive(127); assert am.page == 2 and s._encoders[3].mapped is serum.parameters[20] and s._encoders[4].mapped is None
+ok('page 3 maps P16..P19, empty slots released')
+s._page_down.receive(127); assert am.page == 1; ok('page down')
+s._touches[1].receive(127); assert 'Serum P9' in s.messages[-1]; ok('touch shows name/value: ' + s.messages[-1])
+s._speed_dial.receive(5); assert abs(serum.parameters[10].value - 5/1270.) < 1e-9; ok('speed dial fine adjust')
+del SENT[:]; serum.parameters[10].value = 0.5; assert (65, 64) in SENT; ok('LED ring follows param value')
+s._view.receive(127); assert serum.parameters[10].value == 0.0; ok('View resets to default')
+
+# learn: press+release Learn, touch knob 3, move P2 in the plug-in UI
+s._learn.receive(127); s._learn.receive(0); assert am.learn_armed and s._encoders[0].mapped is None; ok('learn armed, knobs released')
+s._touches[2].receive(127)
+serum.parameters[3].value = 0.3; s.tick()
+assert not am.learn_armed and s._encoders[2].mapped is serum.parameters[3] and am.page == 1; ok('learned P2 -> knob 3 on page 2')
+assert s._encoders[0].mapped is serum.parameters[9]; ok('other knobs kept their parameters')
+f = os.listdir(AM.MAPPING_DIR); assert f == ['PluginDevice - Serum.json'], f; ok('mapping saved: ' + f[0])
+
+# crossfader learn
+s._learn.receive(127); s._learn.receive(0); s._crossfader.receive(64); serum.parameters[5].value = 0.7; s.tick()
+assert s._crossfader.mapped is serum.parameters[5] and s._mixer.xf is None; ok('crossfader learned to P4')
+
+# switch device and back -> mapping reloaded from disk
+song.view.select_device(eq); s.tick()
+assert am.num_pages == 1 and s._encoders[0].mapped is eq.parameters[1] and s._crossfader.mapped is None and s._mixer.xf is s._crossfader
+ok('other device: default layout, crossfader back to Live')
+song.view.select_device(serum); s.tick()
+assert am.page == 0; s._page_up.receive(127); assert s._encoders[2].mapped is serum.parameters[3]; ok('learned mapping restored from file')
+
+# Live device uses Live curated bank first
+song.view.select_device(simpler); s.tick()
+assert s._encoders[0].mapped is simpler.parameters[6] and s._encoders[2].mapped is None and am.num_pages == 1
+ok('Live device: curated bank used')
+
+# lock
+s._inst.receive(127); assert am.locked; song.view.select_device(eq); s.tick(); assert s._encoders[0].mapped is simpler.parameters[6]; ok('lock keeps device')
+s._inst.receive(127); song.view.select_device(eq); s.tick(); assert s._encoders[0].mapped is eq.parameters[1]; ok('unlock follows again')
+
+# long-press learn resets mapping
+song.view.select_device(serum); s.tick()
+import time; t = time.time; time.time = lambda: t() - 0 ; s._learn.receive(127); s._learn_pressed_at -= 2; s._learn.receive(0)
+assert os.listdir(AM.MAPPING_DIR) == [] and s._crossfader.mapped is None; ok('long-press Learn resets mapping')
+
+# mixer mode
+s._mixer_button.receive(127); assert s._mixer.channel_strip(0).vol is s._encoders[0] and s._encoders[0].mapped is None; ok('mixer mode')
+s._mixer_button.receive(127); assert s._encoders[0].mapped is serum.parameters[1]; ok('back to automap mode')
+
+# parameters reconfigured (Live Configure) -> rebuild
+serum.parameters.append(Param('Serum New')); [cb() for cb in serum.pl]; s.tick(); assert am.num_pages == 3; ok('param list change rebuilds pages')
+# ---- HUD over SysEx
+import json
+def hud():
+    s.midi = []; s.update_display()
+    msgs = [m for m in s.midi if m[:6] == (0xF0, 0, 0x20, 0x29, 0x7F, 0x10)]
+    if not msgs: return None
+    assert all(len(m) <= 9 + 96 and all(b < 0x80 for b in m[1:-1]) for m in msgs)
+    assert [m[6] for m in msgs] == list(range(len(msgs))) and all(m[7] == len(msgs) for m in msgs)
+    return json.loads(bytes(b for m in msgs for b in m[8:-1]).decode('ascii'))
+s.request_hud(True); h = hud()
+assert h['t'] == 'Serum' and h['p'] == 'Page 1 / 3' and h['s'][0][0] == 'Serum P0' and h['pop']; ok('HUD: device, page, names over 7-bit SysEx chunks')
+s._touches[3].receive(127); h = hud(); assert h['touch'] == 3 and h['pop']; ok('HUD pops on touch, highlights knob 4')
+s._touches[3].receive(0); h = hud(); assert h['touch'] == -1; ok('HUD release')
+serum.parameters[2].value = 0.5; h = hud(); assert h['s'][1][2] == 0.5 and not h['pop']; ok('HUD value update without popping')
+assert hud() is None; ok('no resend when nothing changed')
+s._learn.receive(127); s._learn.receive(0); s._touches[5].receive(127); h = hud(); assert h['learn'] and h['lt'] == 5; ok('HUD learn target')
+s._learn.receive(127); s._learn.receive(0); s._touches[5].receive(0); hud()
+serum.name = 'Sérum ✓'; s.request_hud(True); h = hud(); assert h['t'] == 'Sérum ✓'; ok('non-ASCII names survive (JSON escapes)')
+s._mixer_button.receive(127); h = hud(); assert h['t'] == 'Mixer' and h['s'][0][0].startswith('Track') and h['s'][2] is None; ok('mixer HUD: track names/volumes')
+s._mixer_button.receive(127); s._wrapper_active = True; s.request_hud(); assert hud()['hide'] is True; s._wrapper_active = False; ok('HUD hidden when wrapper active')
+s.disconnect(); print('ALL LIVE SCRIPT TESTS PASSED')
+try:
+    os.remove(os.path.join(HERE, '..', 'live-script', 'Nocturn', 'nocturn_debug.log'))
+except OSError:
+    pass
+shutil.rmtree(AM.MAPPING_DIR, ignore_errors=True)
