@@ -1,6 +1,6 @@
 # Nocturn Automap for Apple Silicon
 
-[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-orange)](https://buymeacoffee.com/brondtekv)
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-orange)](https://buymeacoffee.com/digitui)
 
 A native 64-bit replacement for **Novation Automap** and the **Novation Nocturn** driver on modern Macs (Apple Silicon and Intel,
 macOS 12+). Novation's software is 32-bit and stopped working with macOS Catalina; this project rebuilds what it did from scratch,
@@ -89,7 +89,7 @@ See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the Nocturn USB protocol, the MIDI 
 script, the wrapper and NocturnBridge.
 
 ## Support
-If this brought your Nocturn back to life, you can [buy me a coffee](https://buymeacoffee.com/brondtekv). Thank you!
+If this brought your Nocturn back to life, you can [buy me a coffee](https://buymeacoffee.com/digitui). Thank you!
 
 ## Disclaimer
 Novation, Nocturn and Automap are trademarks of Focusrite Audio Engineering Ltd. This project is not affiliated with or endorsed by
