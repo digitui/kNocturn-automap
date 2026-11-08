@@ -90,4 +90,5 @@ Novation or Focusrite. It contains no Novation code or files; the USB protocol w
 you own. Ableton and Live are trademarks of Ableton AG.
 
 ## Licence
-MIT (see [LICENSE](LICENSE)). The optional `wrapper/` links JUCE (AGPLv3/commercial). See [wrapper/README.md](wrapper/README.md).
+[Apache License 2.0](LICENSE). See [NOTICE](NOTICE). The optional `wrapper/` links JUCE (AGPLv3/commercial), so binaries built
+from it follow JUCE's terms. See [wrapper/README.md](wrapper/README.md).
