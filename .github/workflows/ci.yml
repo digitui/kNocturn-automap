@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  bridge-and-script:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build NocturnBridge (universal)
+        run: sh bridge/build.sh && lipo -info bridge/NocturnBridge
+      - name: Protocol core tests
+        run: cc -Wall -o test_core tests/test_core.c && ./test_core
+      - name: Live remote script tests (mocked Live API)
+        run: python3 tests/test_live_script.py
+
+  wrapper:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build AU + VST3 wrapper plug-ins
+        run: |
+          cmake -S wrapper -B wrapper/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build wrapper/build --config Release -j 3
