@@ -21,7 +21,7 @@ else()
 endif()
 
 set(NIGHTCAP_SOURCES
-    Source/kNocTurnLink.cpp
+    Source/NightCapLink.cpp
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp)
 
@@ -59,5 +59,5 @@ function(nightcap_target target name code is_synth au_type)
         juce::juce_recommended_warning_flags)
 endfunction()
 
-nightcap_target(NightCap   "kNocTurn NightCap"    Ngti TRUE  kAudioUnitType_MusicDevice)
-nightcap_target(NightCapFX "kNocTurn NightCap FX" Ngtf FALSE kAudioUnitType_MusicEffect)
+nightcap_target(NightCap   "NightCap"    Ngti TRUE  kAudioUnitType_MusicDevice)
+nightcap_target(NightCapFX "NightCap FX" Ngtf FALSE kAudioUnitType_MusicEffect)

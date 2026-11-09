@@ -1,7 +1,7 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_devices/juce_audio_devices.h>
-#include "kNocTurnLink.h"
+#include "NightCapLink.h"
 #include "PluginCatalog.h"
 
 class NightCapProcessor;
@@ -25,7 +25,7 @@ private:
     float cached = 0.0f;
 };
 
-/** Set by the Live remote script on the selected wrapper to give it the kNocTurn. */
+/** Set by the Live remote script on the selected wrapper to give it the NightCap. */
 class FocusParameter : public juce::AudioProcessorParameter
 {
 public:
@@ -46,7 +46,7 @@ private:
 };
 
 class NightCapProcessor : public juce::AudioProcessor,
-                                public kNocTurnClient,
+                                public NightCapClient,
                                 private juce::AudioProcessorListener,
                                 private juce::Timer
 {
@@ -103,10 +103,10 @@ public:
     void claimHardware()                          { link->setFocus (this, true); }
     void releaseHardware()                        { link->releaseToDaw(); }
     bool hasHardwareFocus() const                 { return link->hasFocus (this); }
-    kNocTurnLink& getLink()                       { return *link; }
+    NightCapLink& getLink()                       { return *link; }
     PluginCatalog& getCatalog()                  { return *catalog; }
 
-    // kNocTurnClient
+    // NightCapClient
     void hardwareControl (int cc, int value) override;
     void hardwareFocusChanged (bool) override;
     void hardwareRepaintLeds() override;
@@ -135,7 +135,7 @@ private:
     void sendLeds (bool force);
     void handleProgramStep (int step);
 
-    juce::SharedResourcePointer<kNocTurnLink> link;
+    juce::SharedResourcePointer<NightCapLink> link;
     juce::SharedResourcePointer<PluginCatalog> catalog;
 
     std::unique_ptr<juce::AudioPluginInstance> owned;

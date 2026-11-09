@@ -139,7 +139,7 @@ NightCapEditor::NightCapEditor (NightCapProcessor& p)
         m.addItem (1, "Reset mapping to all parameters", proc.getHosted() != nullptr);
         m.addItem (2, "Rescan plug-ins");
         m.addItem (3, "Unload plug-in", proc.getHosted() != nullptr);
-        m.addItem (4, "Give kNocTurn back to Live / DAW");
+        m.addItem (4, "Give control back to Live / DAW");
         m.showMenuAsync (PopupMenu::Options().withTargetComponent (menuButton), [this] (int r)
         {
             if (r == 1) proc.resetMapping();
@@ -160,7 +160,7 @@ NightCapEditor::NightCapEditor (NightCapProcessor& p)
     refresh();
     startTimerHz (15);
 
-    // Opening the wrapper's window gives it the kNocTurn, like NightCap did.
+    // Opening the wrapper's window gives it the NightCap, like NightCap did.
     proc.claimHardware();
 }
 
@@ -225,11 +225,11 @@ void NightCapEditor::refresh()
     auto& link = proc.getLink();
     if (scanner.isScanning())         status = scanner.getStatus();
     else if (! link.isConnected())    status = "NightCapBridge not running";
-    else if (! proc.hasHardwareFocus()) status = "kNocTurn: another NightCap instance";
-    else if (! link.nightcapOwnsHardware()) status = "kNocTurn: controlling Live";
-    else                              status = "kNocTurn: in control";
+    else if (! proc.hasHardwareFocus()) status = "Controller: used by another NightCap instance";
+    else if (! link.nightcapOwnsHardware()) status = "Controller: controlling Live";
+    else                              status = "Controller: in control";
     if (proc.isLearnArmed())
-        status = "LEARN: touch a kNocTurn knob (or click a slot), then move a control in the plug-in";
+        status = "LEARN: touch a controller knob (or click a slot), then move a control in the plug-in";
     statusLabel.setText (status, dontSendNotification);
     focusButton.setEnabled (! (proc.hasHardwareFocus() && link.nightcapOwnsHardware()));
 
@@ -260,7 +260,7 @@ void NightCapEditor::showPluginMenu()
         if (! isPositiveAndBelow (idx, types.size())) return;
         String err;
         if (! proc.loadPlugin (types.getReference (idx), err))
-            AlertWindow::showMessageBoxAsync (MessageBoxIconType::WarningIcon, "kNocTurn NightCap",
+            AlertWindow::showMessageBoxAsync (MessageBoxIconType::WarningIcon, "NightCap",
                                               "Could not load " + types.getReference (idx).name + "\n" + err);
     });
 }

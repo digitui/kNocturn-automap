@@ -38,7 +38,7 @@ arrives as a pair: `48 hi` then `49 lo`; the 8-bit value is `hi*2 + (lo >> 6)`.
 count ×3; less than 26 ms apart count ×2.
 
 ## MIDI (NightCapBridge ↔ host)
-NightCapBridge creates two virtual port pairs: **kNocTurn** (DAW / Live script) and **kNocTurn NightCap** (wrapper plug-ins).
+NightCapBridge creates two virtual port pairs: **NightCap** (DAW / Live script) and **NightCap Wrapper** (wrapper plug-ins).
 Controls are sent as CC on channel 1 using the numbers above (decimal). CCs sent back light the LEDs. Only one pair owns the
 hardware at a time, and each pair's LED state is remembered and restored when it takes over again.
 
@@ -46,7 +46,7 @@ hardware at a time, and each pair's LED state is remembered and restored when it
 `7D` is the MIDI manufacturer ID reserved for non-commercial use, followed by "KNC".
 | message | bytes | direction |
 |---|---|---|
-| Route hardware | `… 01 <0 = kNocTurn, 1 = kNocTurn NightCap> F7` | host → bridge |
+| Route hardware | `… 01 <0 = NightCap, 1 = NightCap Wrapper> F7` | host → bridge |
 | Routing changed | `… 02 <0/1> F7` | bridge → both ports |
 | HUD update | `… 10 <chunk index> <chunk count> <ASCII JSON …> F7` | Live script → bridge |
 

@@ -1,5 +1,5 @@
 """
-kNocTurn - Ableton Live remote script with native NightCap (no wrapper plug-in needed).
+NightCap - Ableton Live remote script with native NightCap (no wrapper plug-in needed).
 
   Control         CC        NightCap mode (default)                    Mixer mode
   Encoders 1-8    64-71     the 8 parameters on the current page      volumes of the 8 tracks in the red box
@@ -18,14 +18,14 @@ Works with Live devices, VST and AU plug-ins directly. If a plug-in shows no par
 click Live's "Configure" button on the device once (Live only exposes up to 128 plug-in
 parameters automatically).
 
-If a "kNocTurn NightCap" wrapper plug-in is selected, the kNocTurn is handed to it instead.
+If a "NightCap" wrapper plug-in is selected, the NightCap is handed to it instead.
 """
 import json
 import os
 import time
 import traceback
 
-_DEBUG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'knocturn_debug.log')
+_DEBUG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nightcap_debug.log')
 
 
 def debug(msg):
@@ -73,11 +73,11 @@ def _relative(value):
     return value if value < 64 else value - 128
 
 
-class kNocTurn(ControlSurface):
+class NightCapSurface(ControlSurface):
 
     def __init__(self, c_instance):
         ControlSurface.__init__(self, c_instance)
-        debug('---- script starting (Live loaded kNocTurn) ----')
+        debug('---- script starting (Live loaded NightCap) ----')
         try:
             self._init_surface()
             debug('startup complete')
@@ -101,8 +101,8 @@ class kNocTurn(ControlSurface):
             self._update_mode()
         self.song().add_appointed_device_listener(self._on_appointed_device_changed)
         self._set_bridge_mode(0)
-        self.show_message('kNocTurn connected (native NightCap)')
-        self.log_message('kNocTurn: native NightCap script with HUD loaded')
+        self.show_message('NightCap connected (native NightCap)')
+        self.log_message('NightCap: native NightCap script with HUD loaded')
         self._on_appointed_device_changed()
 
     # ------------------------------------------------------------------ setup
@@ -185,7 +185,7 @@ class kNocTurn(ControlSurface):
         self._update_crossfader()
         self._update_button_leds()
         if self._wrapper_active:
-            self.show_message('kNocTurn: NightCap wrapper in control (press Mixer to return)')
+            self.show_message('NightCap: NightCap wrapper in control (press Mixer to return)')
         self.request_hud(True)
         self.request_rebuild_midi_map()
 
@@ -228,7 +228,7 @@ class kNocTurn(ControlSurface):
             self._set_wrapper(False)
             return
         self._mode = MODE_MIXER if self._mode == MODE_NIGHTCAP else MODE_NIGHTCAP
-        self.show_message('kNocTurn: %s mode' % ('Mixer' if self._mode == MODE_MIXER else 'NightCap'))
+        self.show_message('NightCap: %s mode' % ('Mixer' if self._mode == MODE_MIXER else 'NightCap'))
         self._update_mode()
 
     def _on_learn(self, value):
@@ -343,7 +343,7 @@ class kNocTurn(ControlSurface):
         if not self._hud_logged:
             self._hud_logged = True
             debug('first HUD sent: %d bytes in %d SysEx messages: %s' % (len(data), len(chunks), data[:120]))
-            self.log_message('kNocTurn: HUD data sent to NightCapBridge (%d bytes in %d SysEx messages)' % (len(data), len(chunks)))
+            self.log_message('NightCap: HUD data sent to NightCapBridge (%d bytes in %d SysEx messages)' % (len(data), len(chunks)))
 
     def update_display(self):
         ControlSurface.update_display(self)
@@ -358,7 +358,7 @@ class kNocTurn(ControlSurface):
             except Exception as e:
                 self._hud_dirty = False
                 debug('HUD ERROR:\n' + traceback.format_exc())
-                self.log_message('kNocTurn HUD error: %s' % e)
+                self.log_message('NightCap HUD error: %s' % e)
 
     # ------------------------------------------------------------------ device following / wrapper handoff
     def _on_appointed_device_changed(self):

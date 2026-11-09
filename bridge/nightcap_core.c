@@ -1,5 +1,5 @@
-/* knocturn_core.c - see knocturn_core.h */
-#include "knocturn_core.h"
+/* nightcap_core.c - see nightcap_core.h */
+#include "nightcap_core.h"
 #include <string.h>
 
 void nc_reset_cache(nc_state *s) {

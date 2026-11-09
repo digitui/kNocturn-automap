@@ -25,7 +25,7 @@ struct PluginCatalog
     {
         // never offer ourselves as something to wrap
         for (auto& t : list.getTypes())
-            if (t.name.startsWithIgnoreCase ("kNocTurn NightCap"))
+            if (t.name.startsWithIgnoreCase ("NightCap"))
                 list.removeType (t);
         if (auto xml = list.createXml())
             xml->writeTo (listFile());

@@ -1,20 +1,20 @@
-#include "kNocTurnLink.h"
+#include "NightCapLink.h"
 
 static const juce::uint8 sysexHeader[] = { 0x7D, 0x4B, 0x4E, 0x43 };
 
-kNocTurnLink::kNocTurnLink()
+NightCapLink::NightCapLink()
 {
     tryConnect();
     startTimer (10);
 }
 
-kNocTurnLink::~kNocTurnLink()
+NightCapLink::~NightCapLink()
 {
     stopTimer();
     if (input != nullptr) input->stop();
 }
 
-void kNocTurnLink::tryConnect()
+void NightCapLink::tryConnect()
 {
     if (input == nullptr)
         for (auto& d : juce::MidiInput::getAvailableDevices())
@@ -39,14 +39,14 @@ void kNocTurnLink::tryConnect()
     statusChanged.sendChangeMessage();
 }
 
-void kNocTurnLink::addClient (kNocTurnClient* c)
+void NightCapLink::addClient (NightCapClient* c)
 {
     clients.addIfNotAlreadyThere (c);
     if (focused == nullptr)
         setFocus (c, false);
 }
 
-void kNocTurnLink::removeClient (kNocTurnClient* c)
+void NightCapLink::removeClient (NightCapClient* c)
 {
     clients.removeFirstMatchingValue (c);
     if (focused == c)
@@ -58,7 +58,7 @@ void kNocTurnLink::removeClient (kNocTurnClient* c)
     statusChanged.sendChangeMessage();
 }
 
-void kNocTurnLink::setFocus (kNocTurnClient* c, bool claimHardware)
+void NightCapLink::setFocus (NightCapClient* c, bool claimHardware)
 {
     if (c != focused)
     {
@@ -74,31 +74,31 @@ void kNocTurnLink::setFocus (kNocTurnClient* c, bool claimHardware)
     statusChanged.sendChangeMessage();
 }
 
-void kNocTurnLink::releaseToDaw()
+void NightCapLink::releaseToDaw()
 {
     sendModeSysex (0);
 }
 
-void kNocTurnLink::sendModeSysex (int mode)
+void NightCapLink::sendModeSysex (int mode)
 {
     if (output == nullptr) return;
     const juce::uint8 data[] = { 0x7D, 0x4B, 0x4E, 0x43, 0x01, (juce::uint8) (mode ? 1 : 0) };
     output->sendMessageNow (juce::MidiMessage::createSysExMessage (data, (int) sizeof (data)));
 }
 
-void kNocTurnLink::sendCC (const kNocTurnClient* from, int cc, int value)
+void NightCapLink::sendCC (const NightCapClient* from, int cc, int value)
 {
     if (output == nullptr || from != focused) return;
     output->sendMessageNow (juce::MidiMessage::controllerEvent (1, cc, juce::jlimit (0, 127, value)));
 }
 
-void kNocTurnLink::handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage& m)
+void NightCapLink::handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage& m)
 {
     const juce::ScopedLock sl (queueLock);
     queue.push_back (m);
 }
 
-void kNocTurnLink::timerCallback()
+void NightCapLink::timerCallback()
 {
     std::vector<juce::MidiMessage> pending;
     {

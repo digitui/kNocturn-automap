@@ -1,5 +1,5 @@
 #define NC_SLEEP_MS(x) ((void)0)
-#include "../bridge/knocturn_core.c"
+#include "../bridge/nightcap_core.c"
 #include <stdio.h>
 #include <assert.h>
 static uint8_t usb[256]; static size_t ul; static int npk;

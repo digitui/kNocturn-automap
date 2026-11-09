@@ -1,13 +1,13 @@
 /*
- * knocturn_core.h - Novation Nocturn USB protocol (platform independent)
+ * nightcap_core.h - Novation Nocturn USB protocol (platform independent)
  *
  * Protocol documented from the original 32-bit Novation driver software (v4.12, i386):
  *   original driver output (Initialise) / Write / Flush
  *   original driver input (OnData)
  *   original control table (Translate) / HandleEncoder
  */
-#ifndef KNOCTURN_CORE_H
-#define KNOCTURN_CORE_H
+#ifndef NIGHTCAP_CORE_H
+#define NIGHTCAP_CORE_H
 #include <stdint.h>
 #include <stddef.h>
 
@@ -32,8 +32,8 @@
 #define NC_MAX_PACKET 8           /* Flush() fires when >7 bytes buffered */
 
 /* Routing targets ("modes"): which virtual MIDI port pair owns the hardware */
-#define NC_PORT_MAIN    0   /* "kNocTurn"          - DAW / Live remote script */
-#define NC_PORT_NIGHTCAP 1   /* "kNocTurn NightCap"  - NightCap wrapper plug-ins */
+#define NC_PORT_MAIN    0   /* "NightCap"          - DAW / Live remote script */
+#define NC_PORT_NIGHTCAP 1   /* "NightCap"  - NightCap wrapper plug-ins */
 #define NC_NUM_PORTS    2
 
 /* Mode-switch SysEx (host -> bridge):  F0 7D 4B 4E 43 01 <port> F7

@@ -50,14 +50,14 @@ class Song(object):
         self.appointed_device = d
         for cb in self.al: cb()
 
-import kNocTurn.NightCap as AM
+import NightCap.NightCap as AM
 AM.MAPPING_DIR = os.path.join(HERE, 'mappings_test')
 shutil.rmtree(AM.MAPPING_DIR, ignore_errors=True)
-from kNocTurn.kNocTurn import kNocTurn
+from NightCap.NightCapSurface import NightCapSurface
 
 serum = Device('Serum', 20); eq = Device('EQ Eight', 5, 'Eq8'); simpler = Device('Simpler', 7, 'OriginalSimpler')
 song = Song([Track([serum, eq]), Track([simpler])])
-s = kNocTurn(song); s.tick()
+s = NightCapSurface(song); s.tick()
 assert s.midi[0] == (0xF0, 0x7D, 0x4B, 0x4E, 0x43, 1, 0, 0xF7)
 def ok(msg): print('ok:', msg)
 
@@ -133,7 +133,7 @@ s._mixer_button.receive(127); h = hud(); assert h['t'] == 'Mixer' and h['s'][0][
 s._mixer_button.receive(127); s._wrapper_active = True; s.request_hud(); assert hud()['hide'] is True; s._wrapper_active = False; ok('HUD hidden when wrapper active')
 s.disconnect(); print('ALL LIVE SCRIPT TESTS PASSED')
 try:
-    os.remove(os.path.join(HERE, '..', 'live-script', 'kNocTurn', 'knocturn_debug.log'))
+    os.remove(os.path.join(HERE, '..', 'live-script', 'NightCap', 'nightcap_debug.log'))
 except OSError:
     pass
 shutil.rmtree(AM.MAPPING_DIR, ignore_errors=True)

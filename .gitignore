@@ -7,8 +7,8 @@ build/
 __pycache__/
 *.pyc
 # runtime files written by the Live script
-live-script/kNocTurn/mappings/
-live-script/kNocTurn/knocturn_debug.log
+live-script/NightCap/mappings/
+live-script/NightCap/nightcap_debug.log
 tests/mappings_test/
 # macOS
 .DS_Store

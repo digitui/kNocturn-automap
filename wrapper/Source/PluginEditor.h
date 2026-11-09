@@ -60,7 +60,7 @@ private:
     std::unique_ptr<juce::AudioProcessorEditor> hostedEditor;
 
     juce::TextButton loadButton { "Load plug-in..." }, learnButton { "Learn" },
-                     prevPage { "<" }, nextPage { ">" }, focusButton { "Take kNocTurn" },
+                     prevPage { "<" }, nextPage { ">" }, focusButton { "Take control" },
                      menuButton { "..." };
     juce::Label pluginName, pageLabel, statusLabel;
     SlotDisplay slots[NightCapProcessor::slotsPerPage + 1];

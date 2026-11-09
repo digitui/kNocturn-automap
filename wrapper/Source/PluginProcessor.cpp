@@ -386,7 +386,7 @@ NightCapProcessor::SlotInfo NightCapProcessor::getSlotInfo (int slot) const
     return info;
 }
 
-//============================================================================== kNocTurn input
+//============================================================================== NightCap input
 void NightCapProcessor::setHostedParamFromHardware (int paramIndex, float v)
 {
     if (auto* p = getHostedParam (paramIndex))
@@ -441,7 +441,7 @@ void NightCapProcessor::nudgeSlot (int slot, double delta)
 
 void NightCapProcessor::hardwareControl (int cc, int value)
 {
-    using namespace kNocTurnCC;
+    using namespace NightCapCC;
     const bool pressed = value > 0;
 
     if (cc >= encoderFirst && cc < encoderFirst + slotsPerPage)
@@ -539,7 +539,7 @@ void NightCapProcessor::sendLeds (bool force)
     {
         if (force || ledCache[cc] != v) { ledCache[cc] = v; link->sendCC (this, cc, v); }
     };
-    using namespace kNocTurnCC;
+    using namespace NightCapCC;
     for (int s = 0; s < slotsPerPage; ++s)
     {
         auto* p = getHostedParam (paramForSlot (s));
@@ -631,7 +631,7 @@ void NightCapProcessor::setStateInformation (const void* data, int size)
         PluginDescription desc;
         if (! desc.loadFromXml (*descXml)) return;
         String err;
-        if (! loadPlugin (desc, err)) { DBG ("kNocTurn NightCap: could not reload " << desc.name << ": " << err); return; }
+        if (! loadPlugin (desc, err)) { DBG ("NightCap: could not reload " << desc.name << ": " << err); return; }
         if (auto* st = xml->getChildByName ("STATE"))
         {
             MemoryBlock mb;

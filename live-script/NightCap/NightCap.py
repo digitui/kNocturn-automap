@@ -4,7 +4,7 @@ no wrapper plug-in needed.
 
  * Every parameter of the controlled device is laid out in pages of 8 knobs
    (Live's own curated banks first for Live devices, then everything else).
- * Learn: press Learn, touch a kNocTurn knob (or move the crossfader), then move a control
+ * Learn: press Learn, touch a controller knob (or move the crossfader), then move a control
    in the plug-in's own window. The mapping is saved per plug-in and reused next time.
  * Speed dial fine-adjusts the last knob you touched. View resets it to its default.
  * Names / values are shown in Live's status bar; LED rings follow the parameter values.
@@ -153,7 +153,7 @@ class NightCapEngine(object):
         self._watch_for_learn(self._learn)
         self._connect()
         if self._learn:
-            self._message('LEARN: touch a kNocTurn knob (or move the crossfader), then move a control in the plug-in')
+            self._message('LEARN: touch a controller knob (or move the crossfader), then move a control in the plug-in')
         else:
             self._show_page()
         self._hud(True)
@@ -393,7 +393,7 @@ class NightCapEngine(object):
             with open(self._mapping_file(), 'w') as f:
                 json.dump(self._custom, f, indent=1)
         except Exception as e:
-            self._surface.log_message('kNocTurn: could not save mapping: %s' % e)
+            self._surface.log_message('NightCap: could not save mapping: %s' % e)
 
     # ------------------------------------------------------------------ HUD
     def _hud(self, pop):
@@ -446,4 +446,4 @@ class NightCapEngine(object):
                                                  self._page + 1, self.num_pages, '  '.join(names)))
 
     def _message(self, text):
-        self._surface.show_message('kNocTurn: ' + text)
+        self._surface.show_message('NightCap: ' + text)

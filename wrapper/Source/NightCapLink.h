@@ -1,13 +1,13 @@
 /*
- * kNocTurnLink - one per process, shared by every kNocTurn NightCap wrapper instance.
- * Talks to NightCapBridge's "kNocTurn NightCap" MIDI ports and routes the hardware to
+ * NightCapLink - one per process, shared by every NightCap wrapper instance.
+ * Talks to NightCapBridge's "NightCap" MIDI ports and routes the hardware to
  * whichever wrapper instance currently has focus (like NightCap Server did).
  */
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 
-namespace kNocTurnCC
+namespace NightCapCC
 {
     constexpr int encoderFirst   = 64;   // 64..71 relative
     constexpr int crossfader     = 72;   // absolute 0..127
@@ -23,38 +23,38 @@ namespace kNocTurnCC
     inline int relative (int v) noexcept { return v < 64 ? v : v - 128; }
 }
 
-class kNocTurnClient
+class NightCapClient
 {
 public:
-    virtual ~kNocTurnClient() = default;
+    virtual ~NightCapClient() = default;
     virtual void hardwareControl (int cc, int value) = 0;       // message thread
     virtual void hardwareFocusChanged (bool hasFocus) = 0;      // message thread
     virtual void hardwareRepaintLeds() = 0;                     // message thread
     virtual juce::String hardwareClientName() const = 0;
 };
 
-class kNocTurnLink : private juce::MidiInputCallback,
+class NightCapLink : private juce::MidiInputCallback,
                     private juce::Timer
 {
 public:
-    static constexpr const char* portName = "kNocTurn NightCap";
+    static constexpr const char* portName = "NightCap Wrapper";
 
-    kNocTurnLink();
-    ~kNocTurnLink() override;
+    NightCapLink();
+    ~NightCapLink() override;
 
-    void addClient (kNocTurnClient*);
-    void removeClient (kNocTurnClient*);
+    void addClient (NightCapClient*);
+    void removeClient (NightCapClient*);
 
     /** Give the hardware to this client. claimHardware also tells NightCapBridge to
-        route the kNocTurn to NightCap (instead of Live / the DAW). */
-    void setFocus (kNocTurnClient*, bool claimHardware);
-    kNocTurnClient* getFocus() const noexcept { return focused; }
-    bool hasFocus (const kNocTurnClient* c) const noexcept { return c != nullptr && c == focused; }
+        route the NightCap to NightCap (instead of Live / the DAW). */
+    void setFocus (NightCapClient*, bool claimHardware);
+    NightCapClient* getFocus() const noexcept { return focused; }
+    bool hasFocus (const NightCapClient* c) const noexcept { return c != nullptr && c == focused; }
 
     /** Hand the hardware back to the DAW (Live remote script). */
     void releaseToDaw();
 
-    void sendCC (const kNocTurnClient* from, int cc, int value);
+    void sendCC (const NightCapClient* from, int cc, int value);
 
     bool isConnected() const noexcept { return input != nullptr && output != nullptr; }
     bool nightcapOwnsHardware() const noexcept { return bridgeMode == 1; }
@@ -69,13 +69,13 @@ private:
 
     std::unique_ptr<juce::MidiInput> input;
     std::unique_ptr<juce::MidiOutput> output;
-    juce::Array<kNocTurnClient*> clients;
-    kNocTurnClient* focused = nullptr;
+    juce::Array<NightCapClient*> clients;
+    NightCapClient* focused = nullptr;
     int bridgeMode = 0;
     int connectCountdown = 0;
 
     juce::CriticalSection queueLock;
     std::vector<juce::MidiMessage> queue;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (kNocTurnLink)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NightCapLink)
 };
