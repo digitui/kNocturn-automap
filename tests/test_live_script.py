@@ -147,14 +147,20 @@ assert os.path.exists(os.path.join(AM.MAPPING_DIR, 'InstrumentGroupDevice - Drea
 song.view.select_device(wooley); s.tick()
 assert s._nightcap._custom is None and s._encoders[0].mapped is wooley.parameters[1]; ok('other rack keeps its default layout')
 
-# legacy shared file ("Instrument Rack") only applies to the rack whose macros it names
+# the old shared "Instrument Rack" file is no longer applied to any rack
 os.remove(os.path.join(AM.MAPPING_DIR, 'InstrumentGroupDevice - Dream Pad.json'))
 with open(os.path.join(AM.MAPPING_DIR, 'InstrumentGroupDevice - Instrument Rack.json'), 'w') as f:
     json.dump({'slots': ['Reso', 'Drive', 'Filter Freq', '', '', '', '', ''], 'crossfader': ''}, f)
 song.view.select_device(pad); s.tick()
-assert s._encoders[0].mapped is pad.parameters[3]; ok('legacy shared rack mapping still loads for the matching rack')
+assert s._nightcap._custom is None and s._encoders[0].mapped is pad.parameters[1]; ok('old shared rack file ignored: rack shows its own macros')
+# a mapping only "matching" on generic Macro N names is not used
+with open(os.path.join(AM.MAPPING_DIR, 'InstrumentGroupDevice - Wooley Bass.json'), 'w') as f:
+    # 8 of 10 names exist, but only because of the generic ones: without the filter this would pass 80%
+    json.dump({'slots': ['Drive', 'Glide'] + ['Macro %d' % i for i in range(9, 17)], 'crossfader': ''}, f)
+wooley.parameters += [Param('Macro %d' % i) for i in range(9, 17)]
 song.view.select_device(wooley); s.tick()
-assert s._nightcap._custom is None and s._encoders[0].mapped is wooley.parameters[1]; ok('legacy mapping ignored for a rack it does not fit')
+assert s._nightcap._custom is None and s._encoders[0].mapped is wooley.parameters[1]; ok('generic Macro N names do not count as a match')
+os.remove(os.path.join(AM.MAPPING_DIR, 'InstrumentGroupDevice - Wooley Bass.json'))
 
 # plug-in whose parameters appear after selection (Live opening a set): saved mapping applies once they load
 late = Device('Late Synth', 0)

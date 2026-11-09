@@ -11,6 +11,7 @@ no wrapper plug-in needed.
 """
 import json
 import os
+import re
 
 try:
     from _Generic.Devices import parameter_banks
@@ -22,6 +23,7 @@ XFADER = SLOTS
 MAPPING_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mappings')
 PLUGIN_CLASSES = ('PluginDevice', 'AuPluginDevice')
 RACK_CLASSES = ('InstrumentGroupDevice', 'AudioEffectGroupDevice', 'MidiEffectGroupDevice', 'DrumGroupDevice')
+_GENERIC_NAME = re.compile(r'^Macro \d+$')
 _DEBUG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nightcap_debug.log')
 
 
@@ -212,6 +214,12 @@ class NightCapEngine(object):
             self._watch_for_learn(False)
         self._device = device
         self._listen_device(device)
+        if device is not None:
+            try:
+                _debug('selected %s (%s, %d parameters) -> %s.json'
+                       % (device.name, device.class_name, len(self._all_params()), _safe_name(self._device_key())))
+            except Exception:
+                pass
         self._custom = self._load_mapping()
         self._page = 0
         self._touched = -1
@@ -391,56 +399,51 @@ class NightCapEngine(object):
         self._surface.nightcap_state_changed()
 
     # ------------------------------------------------------------------ persistence
-    def _device_key(self, legacy=False):
+    def _device_key(self):
         """Mappings are saved per plug-in, per rack and per Live device type.
 
         Plug-ins and racks are keyed by their own name ("Serum 2", "Wooley Bass"), so two
         Instrument Racks no longer share one mapping. Other Live devices are keyed by type
-        ("EQ Eight"), so a renamed EQ Eight keeps its mapping. legacy=True gives the key that
-        earlier versions used for racks (their type, "Instrument Rack")."""
+        ("EQ Eight"), so a renamed EQ Eight keeps its mapping."""
         d = self._device
         kind = getattr(d, 'class_name', 'Device')
-        if kind in PLUGIN_CLASSES or (kind in RACK_CLASSES and not legacy):
+        if kind in PLUGIN_CLASSES or kind in RACK_CLASSES:
             name = d.name
         else:
             name = getattr(d, 'class_display_name', '')
         return '%s - %s' % (kind, name or d.name)
 
-    def _mapping_file(self, legacy=False):
-        return os.path.join(MAPPING_DIR, _safe_name(self._device_key(legacy)) + '.json')
+    def _mapping_file(self):
+        return os.path.join(MAPPING_DIR, _safe_name(self._device_key()) + '.json')
 
     def _load_mapping(self):
         """Return the saved mapping for this device, or None for the default layout.
 
-        A saved mapping is only used when most of the parameter names it refers to exist on
-        this device - otherwise it belongs to something else (or the device's parameters
-        haven't loaded yet) and the default layout is better than a page of empty knobs."""
+        A saved mapping is only used when nearly all of the parameter names it refers to exist on
+        this device (generic names like "Macro 9" don't count, every rack has those). Otherwise it
+        belongs to something else, or the device's parameters haven't loaded yet, and the default
+        layout is better than a page of wrong or empty knobs."""
         self._custom_path = None
         if self._device is None:
             return None
+        path = self._mapping_file()
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+        except Exception:
+            return None
+        if not isinstance(data, dict) or not isinstance(data.get('slots'), list):
+            return None
         present = set(p.name for p in self._all_params())
-        candidates = [self._mapping_file()]
-        if self._mapping_file(legacy=True) != candidates[0]:
-            candidates.append(self._mapping_file(legacy=True))
-        for path in candidates:
-            try:
-                with open(path, 'r') as f:
-                    data = json.load(f)
-            except Exception:
-                continue
-            if not isinstance(data, dict) or not isinstance(data.get('slots'), list):
-                continue
-            names = [n for n in data['slots'] if n]
-            if data.get('crossfader'):
-                names.append(data['crossfader'])
-            hits = sum(1 for n in names if n in present)
-            if names and hits * 2 >= len(names):
-                self._custom_path = path
-                _debug('mapping for %s: using %s (%d/%d parameters found)'
-                       % (self._device.name, os.path.basename(path), hits, len(names)))
-                return data
-            _debug('mapping for %s: ignoring %s (%d/%d parameters found)'
-                   % (self._device.name, os.path.basename(path), hits, len(names)))
+        names = [n for n in data['slots'] if n and not _GENERIC_NAME.match(n)]
+        if data.get('crossfader'):
+            names.append(data['crossfader'])
+        hits = sum(1 for n in names if n in present)
+        if names and hits * 10 >= len(names) * 8:
+            self._custom_path = path
+            _debug('  mapping: using %s (%d/%d parameters found)' % (os.path.basename(path), hits, len(names)))
+            return data
+        _debug('  mapping: not using %s yet (%d/%d parameters found)' % (os.path.basename(path), hits, len(names)))
         return None
 
     def _save_mapping(self):
