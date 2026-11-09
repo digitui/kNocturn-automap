@@ -20,6 +20,18 @@ except Exception:  # pragma: no cover - older/newer Live layouts
 SLOTS = 8
 XFADER = SLOTS
 MAPPING_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mappings')
+PLUGIN_CLASSES = ('PluginDevice', 'AuPluginDevice')
+RACK_CLASSES = ('InstrumentGroupDevice', 'AudioEffectGroupDevice', 'MidiEffectGroupDevice', 'DrumGroupDevice')
+_DEBUG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nightcap_debug.log')
+
+
+def _debug(msg):
+    try:
+        import time
+        with open(_DEBUG_FILE, 'a') as f:
+            f.write('%s  %s\n' % (time.strftime('%H:%M:%S'), msg))
+    except Exception:
+        pass
 
 
 def _safe_name(text):
@@ -40,6 +52,7 @@ class NightCapEngine(object):
         self._device = None
         self._locked = False
         self._pages = []             # list of lists of DeviceParameter (len 8, may contain None)
+        self._custom_path = None     # file the current custom mapping came from
         self._custom = None          # learned mapping: {'slots': [names...], 'crossfader': name}
         self._page = 0
         self._last_slot = 0
@@ -162,10 +175,13 @@ class NightCapEngine(object):
         if self._device is None:
             return
         self._custom = None
-        try:
-            os.remove(self._mapping_file())
-        except OSError:
-            pass
+        for path in (getattr(self, '_custom_path', None), self._mapping_file()):
+            if path:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+        self._custom_path = None
         self._rebuild_pages()
         self._message('Mapping reset to default for %s' % self._device.name)
 
@@ -218,8 +234,16 @@ class NightCapEngine(object):
                 pass
 
     def _on_parameters_changed(self):
-        # plug-in parameters were (re)configured - rebuild after the notification
-        self._surface.schedule_message(1, self._rebuild_pages)
+        # Plug-in parameters were (re)configured, or have just finished loading (common when
+        # Live opens a set): re-check the saved mapping, then rebuild after the notification.
+        self._surface.schedule_message(1, self._reload_after_parameters_change)
+
+    def _reload_after_parameters_change(self):
+        if self._device is None or self._learn:
+            self._rebuild_pages()
+            return
+        self._custom = self._load_mapping()
+        self._rebuild_pages()
 
     def _all_params(self):
         if self._device is None:
@@ -367,31 +391,66 @@ class NightCapEngine(object):
         self._surface.nightcap_state_changed()
 
     # ------------------------------------------------------------------ persistence
-    def _device_key(self):
+    def _device_key(self, legacy=False):
+        """Mappings are saved per plug-in, per rack and per Live device type.
+
+        Plug-ins and racks are keyed by their own name ("Serum 2", "Wooley Bass"), so two
+        Instrument Racks no longer share one mapping. Other Live devices are keyed by type
+        ("EQ Eight"), so a renamed EQ Eight keeps its mapping. legacy=True gives the key that
+        earlier versions used for racks (their type, "Instrument Rack")."""
         d = self._device
         kind = getattr(d, 'class_name', 'Device')
-        name = getattr(d, 'class_display_name', '') if kind not in ('PluginDevice', 'AuPluginDevice') else d.name
+        if kind in PLUGIN_CLASSES or (kind in RACK_CLASSES and not legacy):
+            name = d.name
+        else:
+            name = getattr(d, 'class_display_name', '')
         return '%s - %s' % (kind, name or d.name)
 
-    def _mapping_file(self):
-        return os.path.join(MAPPING_DIR, _safe_name(self._device_key()) + '.json')
+    def _mapping_file(self, legacy=False):
+        return os.path.join(MAPPING_DIR, _safe_name(self._device_key(legacy)) + '.json')
 
     def _load_mapping(self):
+        """Return the saved mapping for this device, or None for the default layout.
+
+        A saved mapping is only used when most of the parameter names it refers to exist on
+        this device - otherwise it belongs to something else (or the device's parameters
+        haven't loaded yet) and the default layout is better than a page of empty knobs."""
+        self._custom_path = None
         if self._device is None:
             return None
-        try:
-            with open(self._mapping_file(), 'r') as f:
-                data = json.load(f)
-            return data if isinstance(data, dict) and 'slots' in data else None
-        except Exception:
-            return None
+        present = set(p.name for p in self._all_params())
+        candidates = [self._mapping_file()]
+        if self._mapping_file(legacy=True) != candidates[0]:
+            candidates.append(self._mapping_file(legacy=True))
+        for path in candidates:
+            try:
+                with open(path, 'r') as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+            if not isinstance(data, dict) or not isinstance(data.get('slots'), list):
+                continue
+            names = [n for n in data['slots'] if n]
+            if data.get('crossfader'):
+                names.append(data['crossfader'])
+            hits = sum(1 for n in names if n in present)
+            if names and hits * 2 >= len(names):
+                self._custom_path = path
+                _debug('mapping for %s: using %s (%d/%d parameters found)'
+                       % (self._device.name, os.path.basename(path), hits, len(names)))
+                return data
+            _debug('mapping for %s: ignoring %s (%d/%d parameters found)'
+                   % (self._device.name, os.path.basename(path), hits, len(names)))
+        return None
 
     def _save_mapping(self):
         try:
             if not os.path.isdir(MAPPING_DIR):
                 os.makedirs(MAPPING_DIR)
-            with open(self._mapping_file(), 'w') as f:
+            path = self._mapping_file()
+            with open(path, 'w') as f:
                 json.dump(self._custom, f, indent=1)
+            self._custom_path = path
         except Exception as e:
             self._surface.log_message('NightCap: could not save mapping: %s' % e)
 

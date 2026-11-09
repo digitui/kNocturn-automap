@@ -131,6 +131,42 @@ s._learn.receive(127); s._learn.receive(0); s._touches[5].receive(0); hud()
 serum.name = 'Sérum ✓'; s.request_hud(True); h = hud(); assert h['t'] == 'Sérum ✓'; ok('non-ASCII names survive (JSON escapes)')
 s._mixer_button.receive(127); h = hud(); assert h['t'] == 'Mixer' and h['s'][0][0].startswith('Track') and h['s'][2] is None; ok('mixer HUD: track names/volumes')
 s._mixer_button.receive(127); s._wrapper_active = True; s.request_hud(); assert hud()['hide'] is True; s._wrapper_active = False; ok('HUD hidden when wrapper active')
+# ---- racks: each rack keeps its own mapping (they all share the type name "Instrument Rack")
+s._mixer_button.receive(127) if s._mode != 0 else None
+def rack(name, macros):
+    d = Device(name, 0, 'InstrumentGroupDevice'); d.class_display_name = 'Instrument Rack'
+    d.parameters = [Param('Device On')] + [Param(m) for m in macros]
+    return d
+wooley = rack('Wooley Bass', ['Filter Cutoff', 'Filter Reso', 'Filter Drive', 'Filter Type', 'Filter Env', 'Arp Gate', 'Chorus', 'Volume'])
+pad = rack('Dream Pad', ['Drive', 'Filter Freq', 'Reso', 'Glide', 'FM', 'Mod 1', 'Mod 2', 'Space'])
+song.tracks.append(Track([wooley, pad]))
+song.view.select_device(pad); s.tick()
+s._learn.receive(127); s._learn.receive(0); s._touches[0].receive(127); pad.parameters[8].value = 0.4; s.tick(); s._touches[0].receive(0)
+assert s._encoders[0].mapped is pad.parameters[8]; ok('learned on rack "Dream Pad"')
+assert os.path.exists(os.path.join(AM.MAPPING_DIR, 'InstrumentGroupDevice - Dream Pad.json')); ok('rack mapping saved under the rack\'s own name')
+song.view.select_device(wooley); s.tick()
+assert s._nightcap._custom is None and s._encoders[0].mapped is wooley.parameters[1]; ok('other rack keeps its default layout')
+
+# legacy shared file ("Instrument Rack") only applies to the rack whose macros it names
+os.remove(os.path.join(AM.MAPPING_DIR, 'InstrumentGroupDevice - Dream Pad.json'))
+with open(os.path.join(AM.MAPPING_DIR, 'InstrumentGroupDevice - Instrument Rack.json'), 'w') as f:
+    json.dump({'slots': ['Reso', 'Drive', 'Filter Freq', '', '', '', '', ''], 'crossfader': ''}, f)
+song.view.select_device(pad); s.tick()
+assert s._encoders[0].mapped is pad.parameters[3]; ok('legacy shared rack mapping still loads for the matching rack')
+song.view.select_device(wooley); s.tick()
+assert s._nightcap._custom is None and s._encoders[0].mapped is wooley.parameters[1]; ok('legacy mapping ignored for a rack it does not fit')
+
+# plug-in whose parameters appear after selection (Live opening a set): saved mapping applies once they load
+late = Device('Late Synth', 0)
+song.tracks.append(Track([late]))
+with open(os.path.join(AM.MAPPING_DIR, 'PluginDevice - Late Synth.json'), 'w') as f:
+    json.dump({'slots': ['Cutoff', 'Res'], 'crossfader': ''}, f)
+song.view.select_device(late); s.tick()
+assert s._nightcap._custom is None; ok('mapping not applied while parameters are missing')
+late.parameters = [Param('Device On'), Param('Res'), Param('Cutoff')]
+[cb() for cb in late.pl]; s.tick()
+assert s._encoders[0].mapped is late.parameters[2] and s._encoders[1].mapped is late.parameters[1]; ok('mapping applied when parameters finish loading')
+
 s.disconnect(); print('ALL LIVE SCRIPT TESTS PASSED')
 try:
     os.remove(os.path.join(HERE, '..', 'live-script', 'NightCap', 'nightcap_debug.log'))
