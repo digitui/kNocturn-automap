@@ -343,7 +343,7 @@ class kNocTurn(ControlSurface):
         if not self._hud_logged:
             self._hud_logged = True
             debug('first HUD sent: %d bytes in %d SysEx messages: %s' % (len(data), len(chunks), data[:120]))
-            self.log_message('kNocTurn: HUD data sent to kNocTurnBridge (%d bytes in %d SysEx messages)' % (len(data), len(chunks)))
+            self.log_message('kNocTurn: HUD data sent to NightCapBridge (%d bytes in %d SysEx messages)' % (len(data), len(chunks)))
 
     def update_display(self):
         ControlSurface.update_display(self)

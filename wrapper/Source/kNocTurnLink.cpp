@@ -124,7 +124,7 @@ void kNocTurnLink::timerCallback()
         }
     }
 
-    // Reconnect every ~2 s if kNocTurnBridge was started after the plug-in (or restarted)
+    // Reconnect every ~2 s if NightCapBridge was started after the plug-in (or restarted)
     if (++connectCountdown >= 200)
     {
         connectCountdown = 0;

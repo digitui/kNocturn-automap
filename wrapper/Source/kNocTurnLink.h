@@ -1,6 +1,6 @@
 /*
  * kNocTurnLink - one per process, shared by every kNocTurn NightCap wrapper instance.
- * Talks to kNocTurnBridge's "kNocTurn NightCap" MIDI ports and routes the hardware to
+ * Talks to NightCapBridge's "kNocTurn NightCap" MIDI ports and routes the hardware to
  * whichever wrapper instance currently has focus (like NightCap Server did).
  */
 #pragma once
@@ -45,7 +45,7 @@ public:
     void addClient (kNocTurnClient*);
     void removeClient (kNocTurnClient*);
 
-    /** Give the hardware to this client. claimHardware also tells kNocTurnBridge to
+    /** Give the hardware to this client. claimHardware also tells NightCapBridge to
         route the kNocTurn to NightCap (instead of Live / the DAW). */
     void setFocus (kNocTurnClient*, bool claimHardware);
     kNocTurnClient* getFocus() const noexcept { return focused; }

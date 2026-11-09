@@ -224,7 +224,7 @@ void NightCapEditor::refresh()
     String status;
     auto& link = proc.getLink();
     if (scanner.isScanning())         status = scanner.getStatus();
-    else if (! link.isConnected())    status = "kNocTurnBridge not running";
+    else if (! link.isConnected())    status = "NightCapBridge not running";
     else if (! proc.hasHardwareFocus()) status = "kNocTurn: another NightCap instance";
     else if (! link.nightcapOwnsHardware()) status = "kNocTurn: controlling Live";
     else                              status = "kNocTurn: in control";

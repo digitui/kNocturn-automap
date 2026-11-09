@@ -1,5 +1,5 @@
 # kNocTurn control surface (for the Novation Nocturn controller) for Ableton Live 11/12 (Apple Silicon).
-# Requires kNocTurnBridge running. In Live: Settings > Link, Tempo & MIDI >
+# Requires NightCapBridge running. In Live: Settings > Link, Tempo & MIDI >
 # Control Surface "kNocTurn", Input "kNocTurn", Output "kNocTurn".
 from .kNocTurn import kNocTurn
 

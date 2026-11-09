@@ -25,7 +25,7 @@ arrives as a pair: `48 hi` then `49 lo`; the 8-bit value is `hi*2 + (lo >> 6)`.
 | control | number (hex / dec) | value |
 |---|---|---|
 | Encoders 1–8 | 40–47 / 64–71 | relative: 1–63 = clockwise, 65–127 = anticlockwise (7-bit two's complement) |
-| Crossfader | 48 / 72 | absolute (sent as 0–127 by kNocTurnBridge) |
+| Crossfader | 48 / 72 | absolute (sent as 0–127 by NightCapBridge) |
 | Speed dial | 4A / 74 | relative |
 | Speed dial touch / push | 51 / 81, 52 / 82 | |
 | Crossfader touch | 53 / 83 | |
@@ -37,8 +37,8 @@ arrives as a pair: `48 hi` then `49 lo`; the 8-bit value is `hi*2 + (lo >> 6)`.
 **Encoder acceleration** (matching the original driver): consecutive moves in the same direction less than 16 ms apart
 count ×3; less than 26 ms apart count ×2.
 
-## MIDI (kNocTurnBridge ↔ host)
-kNocTurnBridge creates two virtual port pairs: **kNocTurn** (DAW / Live script) and **kNocTurn NightCap** (wrapper plug-ins).
+## MIDI (NightCapBridge ↔ host)
+NightCapBridge creates two virtual port pairs: **kNocTurn** (DAW / Live script) and **kNocTurn NightCap** (wrapper plug-ins).
 Controls are sent as CC on channel 1 using the numbers above (decimal). CCs sent back light the LEDs. Only one pair owns the
 hardware at a time, and each pair's LED state is remembered and restored when it takes over again.
 

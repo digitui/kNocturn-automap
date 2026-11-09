@@ -10,7 +10,7 @@ native 64-bit replacement, with Ableton Live in particular in mind.
 
 | part | what it does |
 |---|---|
-| **kNocTurnBridge** (`bridge/`) | User-space USB driver. Talks to the Nocturn directly (no kernel extension) and presents it as MIDI ports called **kNocTurn**. Also draws the **HUD** and puts a dial icon in the menu bar. |
+| **NightCapBridge** (`bridge/`) | User-space USB driver. Talks to the Nocturn directly (no kernel extension) and presents it as MIDI ports called **kNocTurn**. Also draws the **HUD** and puts a dial icon in the menu bar. |
 | **kNocTurn Live script** (`live-script/`) | NightCap for Ableton Live 11/12. The Nocturn controls whichever device is selected (Live devices, VST, AU) with pages of 8, learn, mappings saved per plug-in, LED-ring feedback, and a mixer mode. **No wrapper plug-in needed.** |
 | **kNocTurn NightCap plug-ins** (`wrapper/`, optional) | AU/VST3 wrappers that host another plug-in and map all its parameters to the Nocturn: for other DAWs, or plug-ins with more than 128 parameters. |
 
@@ -24,7 +24,7 @@ sh install.sh --with-wrapper   # optional: also the AU/VST3 wrapper plug-ins (ne
 ```
 Then:
 1. Uninstall Novation's old Automap software and USB driver if they're still installed.
-2. Start the driver with `~/Applications/kNocTurnBridge/kNocTurnBridge`. A dial icon appears in the menu bar and the HUD shows briefly.
+2. Start the driver with `~/Applications/NightCapBridge/NightCapBridge`. A dial icon appears in the menu bar and the HUD shows briefly.
 3. In **Ableton Live**, open Settings → Link, Tempo & MIDI and set Control Surface **kNocTurn**, Input **kNocTurn**, Output **kNocTurn**.
    For the kNocTurn ports, turn Track and Sync **off**.
 
@@ -56,7 +56,7 @@ The touched knob is highlighted and the learn target is shown in red. It pops up
 Learn, then fades. Drag it anywhere and it remembers the position. The menu-bar dial icon sets it to *show when touched*,
 *always visible* or *off*.
 
-## kNocTurnBridge options
+## NightCapBridge options
 | flag | |
 |---|---|
 | `-c N` | MIDI channel 1–16 |
@@ -66,15 +66,15 @@ Learn, then fades. Drag it anywhere and it remembers the position. The menu-bar 
 | `-H` | no HUD or menu-bar icon |
 | `-v` | log all USB and MIDI traffic |
 
-**Start at login:** edit the path in `bridge/com.digitui.knocturnbridge.plist`, then
-`cp bridge/com.digitui.knocturnbridge.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.digitui.knocturnbridge.plist`.
+**Start at login:** edit the path in `bridge/com.digitui.nightcapbridge.plist`, then
+`cp bridge/com.digitui.nightcapbridge.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.digitui.nightcapbridge.plist`.
 
 ## Troubleshooting
 - **No HUD, or the Live script seems ignored.** Check that Live's Control Surface is set to **kNocTurn**, not an older "Nocturn" entry
   left by Novation's software. If an old `Nocturn` folder exists in `~/Library/Preferences/Ableton/Live <version>/User Remote Scripts/`,
   you can move it away.
 - **Script diagnostics.** The Live script writes `knocturn_debug.log` next to itself (startup steps, errors, first HUD message).
-- **Driver diagnostics.** Run `kNocTurnBridge -v` to see every USB packet and MIDI message.
+- **Driver diagnostics.** Run `NightCapBridge -v` to see every USB packet and MIDI message.
 - **"device is held by another process"** means Novation's old driver is still installed. Remove it and reboot.
 
 ## Tests
@@ -86,7 +86,7 @@ CI builds the bridge and the wrapper and runs both test suites on macOS (`.githu
 
 ## How it works
 See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the controller's USB protocol, the MIDI map, and the SysEx used between the Live
-script, the wrapper and kNocTurnBridge.
+script, the wrapper and NightCapBridge.
 
 ## Support
 If this brought your Nocturn back to life, you can [buy me a coffee](https://buymeacoffee.com/digitui). Thank you!

@@ -1,5 +1,5 @@
 /*
- * kNocTurnBridge - native Apple Silicon / Intel driver for the Novation Nocturn controller.
+ * NightCapBridge - native Apple Silicon / Intel driver for the Novation Nocturn controller.
  *
  * Replaces the 32-bit the original 32-bit server USB layer. Talks to the kNocTurn with
  * user-space IOKit (no kext needed) and exposes it as a CoreMIDI device:
@@ -413,7 +413,7 @@ typedef NS_ENUM(NSInteger, HudMode) { HudAuto = 0, HudAlways = 1, HudOff = 2 };
     NSImage *img = nil;
     if (@available(macOS 11.0, *)) img = [NSImage imageWithSystemSymbolName:@"dial.medium" accessibilityDescription:@"kNocTurn"];
     if (img) { img.template = YES; _statusItem.button.image = img; } else _statusItem.button.title = @"N";
-    _statusItem.button.toolTip = @"kNocTurnBridge";
+    _statusItem.button.toolTip = @"NightCapBridge";
     [self rebuildMenu];
     return self;
 }
@@ -432,7 +432,7 @@ typedef NS_ENUM(NSInteger, HudMode) { HudAuto = 0, HudAlways = 1, HudOff = 2 };
     NSMenuItem *reset = [m addItemWithTitle:@"Reset HUD position" action:@selector(resetPosition:) keyEquivalent:@""];
     reset.target = self;
     [m addItem:NSMenuItem.separatorItem];
-    [m addItemWithTitle:@"Quit kNocTurnBridge" action:@selector(terminate:) keyEquivalent:@"q"];
+    [m addItemWithTitle:@"Quit NightCapBridge" action:@selector(terminate:) keyEquivalent:@"q"];
     m.delegate = self;
     self.statusItem.menu = m;
 }
@@ -524,7 +524,7 @@ static void hud_deliver(NSData *json) {
 }
 
 static void usage(const char *a) {
-    printf("kNocTurnBridge - driver for the Novation Nocturn controller on Apple Silicon\n\n"
+    printf("NightCapBridge - driver for the Novation Nocturn controller on Apple Silicon\n\n"
            "usage: %s [options]\n"
            "  -c N      MIDI channel 1-16 (default 1)\n"
            "  -n NAME   MIDI port base name (default \"kNocTurn\")\n"
@@ -560,7 +560,7 @@ int main(int argc, char **argv) {
         gHud = [HudController new];
         /* startup self-test: show the HUD for a few seconds so it's obvious it works */
         dispatch_async(dispatch_get_main_queue(), ^{
-            [gHud update:@{ @"t": @"kNocTurnBridge HUD ready", @"p": @"",
+            [gHud update:@{ @"t": @"NightCapBridge HUD ready", @"p": @"",
                             @"sub": @"Touch a kNocTurn knob in Ableton Live to see its parameters here. Drag this panel to move it.",
                             @"s": @[], @"touch": @(-1), @"pop": @NO }];
             [gHud showFor:5.0];
@@ -570,7 +570,7 @@ int main(int argc, char **argv) {
     nc_init(&G.core, &cfg, usb_write_cb, midi_out_cb, NULL);
     G.core.mode_changed = mode_changed_cb;
 
-    OSStatus st = MIDIClientCreate(CFSTR("kNocTurnBridge"), NULL, NULL, &G.client);
+    OSStatus st = MIDIClientCreate(CFSTR("NightCapBridge"), NULL, NULL, &G.client);
     for (int p = 0; p < NC_NUM_PORTS && !st; p++) {
         char full[128];
         snprintf(full, sizeof full, p ? "%s NightCap" : "%s", name);

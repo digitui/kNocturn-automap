@@ -1,5 +1,5 @@
 # build output
-bridge/kNocTurnBridge
+bridge/NightCapBridge
 wrapper/build/
 build/
 *.o

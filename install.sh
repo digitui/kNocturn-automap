@@ -1,15 +1,15 @@
 #!/bin/sh
-# Installs kNocTurnBridge (USB driver + HUD) and the Ableton Live remote script.
+# Installs NightCapBridge (USB driver + HUD) and the Ableton Live remote script.
 #   sh install.sh                  driver + Live script   (needs only Xcode Command Line Tools)
 #   sh install.sh --with-wrapper   also builds the optional kNocTurn NightCap AU/VST3 wrapper plug-ins (needs CMake)
 set -e
 cd "$(dirname "$0")"
 
-echo "== kNocTurnBridge (USB driver + HUD)"
+echo "== NightCapBridge (USB driver + HUD)"
 sh bridge/build.sh
-mkdir -p "$HOME/Applications/kNocTurnBridge"
-cp bridge/kNocTurnBridge "$HOME/Applications/kNocTurnBridge/"
-echo "   installed to ~/Applications/kNocTurnBridge/kNocTurnBridge"
+mkdir -p "$HOME/Applications/NightCapBridge"
+cp bridge/NightCapBridge "$HOME/Applications/NightCapBridge/"
+echo "   installed to ~/Applications/NightCapBridge/NightCapBridge"
 
 echo "== Ableton Live remote script"
 DEST="$HOME/Music/Ableton/User Library/Remote Scripts/kNocTurn"
@@ -35,9 +35,11 @@ if [ -f "$OLD/Automap.py" ]; then
     rm -rf "$OLD"
     echo "   removed the previous 'Nocturn' version of this script (now called kNocTurn)"
 fi
-if [ -x "$HOME/Applications/NocturnBridge/NocturnBridge" ]; then
-    echo "   note: the previous driver is still at ~/Applications/NocturnBridge - quit it and delete that folder"
-fi
+for old in NocturnBridge kNocTurnBridge; do
+    if [ -d "$HOME/Applications/$old" ]; then
+        echo "   note: a previous driver is still at ~/Applications/$old - quit it and delete that folder"
+    fi
+done
 
 if [ "$1" = "--with-wrapper" ]; then
     echo "== kNocTurn NightCap wrapper plug-ins (AU + VST3) - first build downloads JUCE"
@@ -49,6 +51,6 @@ if [ "$1" = "--with-wrapper" ]; then
 fi
 
 echo
-echo "Done. Start the driver with:  ~/Applications/kNocTurnBridge/kNocTurnBridge"
+echo "Done. Start the driver with:  ~/Applications/NightCapBridge/NightCapBridge"
 echo "Then in Live: Settings > Link, Tempo & MIDI > Control Surface 'kNocTurn', Input 'kNocTurn', Output 'kNocTurn'."
 echo "(If you used the earlier 'Nocturn' version, re-select these in Live: the names have changed.)"
