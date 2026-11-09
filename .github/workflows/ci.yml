@@ -9,8 +9,8 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - name: Build kNocTurnBridge (universal)
-        run: sh bridge/build.sh && lipo -info bridge/kNocTurnBridge
+      - name: Build NightCapBridge (universal)
+        run: sh bridge/build.sh && lipo -info bridge/NightCapBridge
       - name: Protocol core tests
         run: cc -Wall -o test_core tests/test_core.c && ./test_core
       - name: Live remote script tests (mocked Live API)
