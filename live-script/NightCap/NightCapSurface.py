@@ -175,13 +175,18 @@ class NightCapSurface(ControlSurface):
     def _update_mode(self):
         nightcap = self._mode == MODE_NIGHTCAP and not self._wrapper_active
         mixer = self._mode == MODE_MIXER and not self._wrapper_active
+        # NightCap first: when it goes inactive it releases the knobs, which must happen
+        # before the mixer connects them to track volumes (not after, or it undoes them).
+        if not nightcap:
+            self._nightcap.set_active(False)
         for i in range(8):
             strip = self._mixer.channel_strip(i)
             strip.set_volume_control(self._encoders[i] if mixer else None)
             strip.set_mute_button(self._top_buttons[i] if mixer else None)
         self._session.set_track_bank_buttons(self._page_up if mixer else None,
                                              self._page_down if mixer else None)
-        self._nightcap.set_active(nightcap)
+        if nightcap:
+            self._nightcap.set_active(True)
         self._update_crossfader()
         self._update_button_leds()
         if self._wrapper_active:

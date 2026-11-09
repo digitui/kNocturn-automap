@@ -106,7 +106,13 @@ import time; t = time.time; time.time = lambda: t() - 0 ; s._learn.receive(127);
 assert os.listdir(AM.MAPPING_DIR) == [] and s._crossfader.mapped is None; ok('long-press Learn resets mapping')
 
 # mixer mode
-s._mixer_button.receive(127); assert s._mixer.channel_strip(0).vol is s._encoders[0] and s._encoders[0].mapped is None; ok('mixer mode')
+s._mixer_button.receive(127)
+assert all(s._encoders[i].mapped == 'volume of strip %d' % i for i in range(8)); ok('mixer mode: knobs control track volumes')
+song.view.select_device(eq); s.tick()
+assert all(s._encoders[i].mapped == 'volume of strip %d' % i for i in range(8)); ok('mixer mode: changing device keeps knobs on volumes')
+serum.parameters[3].value = 0.9; s.tick()
+assert s._encoders[2].mapped == 'volume of strip 2'; ok('mixer mode: parameter changes elsewhere do not steal knobs')
+song.view.select_device(serum); s.tick()
 s._mixer_button.receive(127); assert s._encoders[0].mapped is serum.parameters[1]; ok('back to nightcap mode')
 
 # parameters reconfigured (Live Configure) -> rebuild

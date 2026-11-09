@@ -70,8 +70,10 @@ class NightCapEngine(object):
 
     # ------------------------------------------------------------------ public
     def set_active(self, active):
+        was_active = self._active
         self._active = active
-        self._connect()
+        if active or was_active:
+            self._connect()        # connect, or release the knobs once when going inactive
 
     def appointed_device_changed(self, device):
         if self._locked and self._device_alive():
@@ -311,6 +313,10 @@ class NightCapEngine(object):
 
     # ------------------------------------------------------------------ controls & LEDs
     def _connect(self):
+        if not self._active and not self._watched:
+            # Inactive (e.g. Mixer mode): the knobs belong to someone else, so leave them alone.
+            # Releasing them here would undo the mixer's volume mappings.
+            return
         for slot, enc in enumerate(self._encoders):
             param = self._param(slot) if (self._active and not self._learn) else None
             if param is not None:
