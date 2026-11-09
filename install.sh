@@ -1,36 +1,46 @@
 #!/bin/sh
-# Installs NocturnBridge (USB driver + HUD) and the Ableton Live remote script.
+# Installs kNocTurnBridge (USB driver + HUD) and the Ableton Live remote script.
 #   sh install.sh                  driver + Live script   (needs only Xcode Command Line Tools)
-#   sh install.sh --with-wrapper   also builds the optional Nocturn Automap AU/VST3 wrapper plug-ins (needs CMake)
+#   sh install.sh --with-wrapper   also builds the optional kNocTurn NightCap AU/VST3 wrapper plug-ins (needs CMake)
 set -e
 cd "$(dirname "$0")"
 
-echo "== NocturnBridge (USB driver + HUD)"
+echo "== kNocTurnBridge (USB driver + HUD)"
 sh bridge/build.sh
-mkdir -p "$HOME/Applications/NocturnBridge"
-cp bridge/NocturnBridge "$HOME/Applications/NocturnBridge/"
-echo "   installed to ~/Applications/NocturnBridge/NocturnBridge"
+mkdir -p "$HOME/Applications/kNocTurnBridge"
+cp bridge/kNocTurnBridge "$HOME/Applications/kNocTurnBridge/"
+echo "   installed to ~/Applications/kNocTurnBridge/kNocTurnBridge"
 
 echo "== Ableton Live remote script"
-DEST="$HOME/Music/Ableton/User Library/Remote Scripts/Nocturn"
+DEST="$HOME/Music/Ableton/User Library/Remote Scripts/kNocTurn"
 mkdir -p "$DEST"
 rm -rf "$DEST/__pycache__"
-cp live-script/Nocturn/*.py "$DEST/"
+cp live-script/kNocTurn/*.py "$DEST/"
 echo "   installed to $DEST"
 
-# Old Novation Automap installs leave a "Nocturn" in Live's own User Remote Scripts folder.
-# It has the same name and Live loads it instead of this script, so warn about it.
-for d in "$HOME/Library/Preferences/Ableton/"Live*/"User Remote Scripts/Nocturn"; do
-    if [ -d "$d" ]; then
-        echo
-        echo "   WARNING: an old Novation 'Nocturn' script exists at:"
-        echo "     $d"
-        echo "   Live will load it instead of this one. Move it somewhere else (e.g. your Desktop) and restart Live."
+# Upgrade from the earlier "Nocturn" version of this script (identified by its Automap.py):
+# keep its learned mappings, then remove it so Live doesn't list two control surfaces.
+OLD="$HOME/Music/Ableton/User Library/Remote Scripts/Nocturn"
+if [ -f "$OLD/Automap.py" ]; then
+    if [ -d "$OLD/mappings" ]; then
+        mkdir -p "$DEST/mappings"
+        for f in "$OLD/mappings/"*.json; do
+            [ -f "$f" ] || continue
+            n=$(basename "$f" .json)
+            # file names are "<kind> - <device>.json"; the device part is unchanged
+            [ -f "$DEST/mappings/$n.json" ] || cp "$f" "$DEST/mappings/$n.json"
+        done
+        echo "   kept your learned mappings from the previous version"
     fi
-done
+    rm -rf "$OLD"
+    echo "   removed the previous 'Nocturn' version of this script (now called kNocTurn)"
+fi
+if [ -x "$HOME/Applications/NocturnBridge/NocturnBridge" ]; then
+    echo "   note: the previous driver is still at ~/Applications/NocturnBridge - quit it and delete that folder"
+fi
 
 if [ "$1" = "--with-wrapper" ]; then
-    echo "== Nocturn Automap wrapper plug-ins (AU + VST3) - first build downloads JUCE"
+    echo "== kNocTurn NightCap wrapper plug-ins (AU + VST3) - first build downloads JUCE"
     command -v cmake >/dev/null 2>&1 || { echo "   CMake not found: brew install cmake"; exit 1; }
     cmake -S wrapper -B wrapper/build -DCMAKE_BUILD_TYPE=Release
     cmake --build wrapper/build --config Release -j "$(sysctl -n hw.ncpu)"
@@ -39,5 +49,6 @@ if [ "$1" = "--with-wrapper" ]; then
 fi
 
 echo
-echo "Done. Start the driver with:  ~/Applications/NocturnBridge/NocturnBridge"
-echo "Then in Live: Settings > Link, Tempo & MIDI > Control Surface 'Nocturn', Input 'Nocturn', Output 'Nocturn'."
+echo "Done. Start the driver with:  ~/Applications/kNocTurnBridge/kNocTurnBridge"
+echo "Then in Live: Settings > Link, Tempo & MIDI > Control Surface 'kNocTurn', Input 'kNocTurn', Output 'kNocTurn'."
+echo "(If you used the earlier 'Nocturn' version, re-select these in Live: the names have changed.)"

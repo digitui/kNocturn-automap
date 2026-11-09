@@ -1,18 +1,18 @@
 /*
- * nocturn_core.h - Novation Nocturn USB protocol (platform independent)
+ * knocturn_core.h - Novation Nocturn USB protocol (platform independent)
  *
- * Protocol recovered from Novation AutomapServer 4.12 (i386):
- *   NocturnOutputOSX::Initialise / Write / Flush
- *   NocturnInputOSX::OnData
- *   NocturnControlTable::Translate / HandleEncoder
+ * Protocol documented from the original 32-bit Novation driver software (v4.12, i386):
+ *   original driver output (Initialise) / Write / Flush
+ *   original driver input (OnData)
+ *   original control table (Translate) / HandleEncoder
  */
-#ifndef NOCTURN_CORE_H
-#define NOCTURN_CORE_H
+#ifndef KNOCTURN_CORE_H
+#define KNOCTURN_CORE_H
 #include <stdint.h>
 #include <stddef.h>
 
-#define NOCTURN_VID 0x1235
-#define NOCTURN_PID 0x000A
+#define NC_DEVICE_VID 0x1235
+#define NC_DEVICE_PID 0x000A
 
 /* Hardware control numbers (as sent/received on the USB pipe) */
 #define NC_ENC_FIRST        0x40  /* 8 endless encoders, relative, 0x40..0x47 */
@@ -32,12 +32,12 @@
 #define NC_MAX_PACKET 8           /* Flush() fires when >7 bytes buffered */
 
 /* Routing targets ("modes"): which virtual MIDI port pair owns the hardware */
-#define NC_PORT_MAIN    0   /* "Nocturn"          - DAW / Live remote script */
-#define NC_PORT_AUTOMAP 1   /* "Nocturn Automap"  - Automap wrapper plug-ins */
+#define NC_PORT_MAIN    0   /* "kNocTurn"          - DAW / Live remote script */
+#define NC_PORT_NIGHTCAP 1   /* "kNocTurn NightCap"  - NightCap wrapper plug-ins */
 #define NC_NUM_PORTS    2
 
-/* Mode-switch SysEx (host -> bridge):  F0 00 20 29 7F 01 <port> F7
-   Mode notification (bridge -> hosts):  F0 00 20 29 7F 02 <port> F7  (sent on both ports) */
+/* Mode-switch SysEx (host -> bridge):  F0 7D 4B 4E 43 01 <port> F7
+   Mode notification (bridge -> hosts):  F0 7D 4B 4E 43 02 <port> F7  (sent on both ports) */
 #define NC_SYSEX_SET_MODE 0x01
 #define NC_SYSEX_MODE_IS  0x02
 
@@ -49,18 +49,18 @@ typedef struct {
     int absolute_encoders;  /* 1: convert relative encoders to 0..127 + drive LED rings */
     int toggle_buttons;     /* 1: buttons latch on/off, LED shows state */
     int local_feedback;     /* 1: light rings/buttons locally */
-    int acceleration;       /* 1: speed-sensitive encoders (like Automap) */
+    int acceleration;       /* 1: speed-sensitive encoders (like NightCap) */
 } nc_config;
 
 typedef struct {
     nc_config cfg;
     /* input side */
-    int xfader_hi;                /* NocturnInputOSX +0x94 */
+    int xfader_hi;                /* original driver input +0x94 */
     int enc_value[9];             /* 8 encoders + speed dial (absolute mode) */
     int last_dir[9];
     uint64_t last_time[9];
     uint8_t button_state[16];
-    /* output side (NocturnOutputOSX) */
+    /* output side (original driver output) */
     uint8_t out_buf[NC_MAX_PACKET];
     size_t out_len;
     int out_cache[128];           /* last value sent per control, -1 = unknown */

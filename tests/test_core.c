@@ -1,5 +1,5 @@
 #define NC_SLEEP_MS(x) ((void)0)
-#include "../bridge/nocturn_core.c"
+#include "../bridge/knocturn_core.c"
 #include <stdio.h>
 #include <assert.h>
 static uint8_t usb[256]; static size_t ul; static int npk;
@@ -25,9 +25,9 @@ int main(void){
   s.cfg.absolute_encoders=0; s.cfg.local_feedback=0; s.mode_changed=mc; nc_reset_cache(&s);
   reset(); nc_on_host_cc(&s,0,0x70,127); assert(ul==2); puts("main port LED reaches hw OK");
   reset(); nc_on_host_cc(&s,1,0x71,127); assert(ul==0); puts("inactive port LED shadowed OK");
-  reset(); uint8_t sx[]={0xF0,0,0x20,0x29,0x7F,1,1,0xF7}; assert(nc_on_host_sysex(&s,0,sx,8)); assert(last_mode==1&&s.mode==1);
+  reset(); uint8_t sx[]={0xF0,0x7D,0x4B,0x4E,0x43,1,1,0xF7}; assert(nc_on_host_sysex(&s,0,sx,8)); assert(last_mode==1&&s.mode==1);
   { int ok71=0, off70=0; for(size_t i=0;i<ul;i+=2){ if(usb[i]==0x71&&usb[i+1]==127)ok71=1; if(usb[i]==0x70&&usb[i+1]==0)off70=1;} assert(ok71&&off70); }
   puts("mode switch repaints LEDs OK");
-  reset(); uint8_t e[]={0x43,0x02}; nc_on_usb_data(&s,e,2,9000000000ULL); assert(nm==1&&midi_p[0]==1&&midi_v[0]==2); puts("controls routed to automap port OK");
+  reset(); uint8_t e[]={0x43,0x02}; nc_on_usb_data(&s,e,2,9000000000ULL); assert(nm==1&&midi_p[0]==1&&midi_v[0]==2); puts("controls routed to nightcap port OK");
   reset(); sx[6]=0; nc_on_host_sysex(&s,1,sx,8); { int ok70=0; for(size_t i=0;i<ul;i+=2) if(usb[i]==0x70&&usb[i+1]==127) ok70=1; assert(ok70 && last_mode==0);} puts("switch back restores main LEDs OK");
   puts("ALL TESTS PASSED"); return 0; }

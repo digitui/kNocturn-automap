@@ -1,4 +1,4 @@
-# Nocturn protocol notes
+# Protocol notes (Novation Nocturn controller)
 
 ## USB
 | | |
@@ -25,7 +25,7 @@ arrives as a pair: `48 hi` then `49 lo`; the 8-bit value is `hi*2 + (lo >> 6)`.
 | control | number (hex / dec) | value |
 |---|---|---|
 | Encoders 1–8 | 40–47 / 64–71 | relative: 1–63 = clockwise, 65–127 = anticlockwise (7-bit two's complement) |
-| Crossfader | 48 / 72 | absolute (sent as 0–127 by NocturnBridge) |
+| Crossfader | 48 / 72 | absolute (sent as 0–127 by kNocTurnBridge) |
 | Speed dial | 4A / 74 | relative |
 | Speed dial touch / push | 51 / 81, 52 / 82 | |
 | Crossfader touch | 53 / 83 | |
@@ -34,18 +34,19 @@ arrives as a pair: `48 hi` then `49 lo`; the 8-bit value is `hi*2 + (lo >> 6)`.
 
 **LED outputs**: rings 40–47 (position 0–127), ring display style 48–4F, button LEDs 70–7F (0 off, anything else on).
 
-**Encoder acceleration** (as in the original software): consecutive moves in the same direction less than 16 ms apart
+**Encoder acceleration** (matching the original driver): consecutive moves in the same direction less than 16 ms apart
 count ×3; less than 26 ms apart count ×2.
 
-## MIDI (NocturnBridge ↔ host)
-NocturnBridge creates two virtual port pairs: **Nocturn** (DAW / Live script) and **Nocturn Automap** (wrapper plug-ins).
+## MIDI (kNocTurnBridge ↔ host)
+kNocTurnBridge creates two virtual port pairs: **kNocTurn** (DAW / Live script) and **kNocTurn NightCap** (wrapper plug-ins).
 Controls are sent as CC on channel 1 using the numbers above (decimal). CCs sent back light the LEDs. Only one pair owns the
 hardware at a time, and each pair's LED state is remembered and restored when it takes over again.
 
-### SysEx (header `F0 00 20 29 7F`)
+### SysEx (header `F0 7D 4B 4E 43`)
+`7D` is the MIDI manufacturer ID reserved for non-commercial use, followed by "KNC".
 | message | bytes | direction |
 |---|---|---|
-| Route hardware | `… 01 <0 = Nocturn, 1 = Nocturn Automap> F7` | host → bridge |
+| Route hardware | `… 01 <0 = kNocTurn, 1 = kNocTurn NightCap> F7` | host → bridge |
 | Routing changed | `… 02 <0/1> F7` | bridge → both ports |
 | HUD update | `… 10 <chunk index> <chunk count> <ASCII JSON …> F7` | Live script → bridge |
 

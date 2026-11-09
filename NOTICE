@@ -1,4 +1,4 @@
-Nocturn Automap for Apple Silicon
+NightCap (with kNocTurnBridge)
 Copyright 2026 Brendan McEnroe
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
@@ -7,6 +7,7 @@ The optional wrapper plug-ins in wrapper/ are built with JUCE (https://juce.com)
 licensed under the AGPLv3 or a commercial JUCE licence. Binaries built from wrapper/ are
 subject to JUCE's licence terms. See wrapper/README.md.
 
-Novation, Nocturn and Automap are trademarks of Focusrite Audio Engineering Ltd.
-Ableton and Live are trademarks of Ableton AG. This project is not affiliated with or
-endorsed by either company and contains no Novation code or files.
+Novation, Nocturn and Automap are trademarks of Focusrite Audio Engineering Ltd. and are
+used only to identify the hardware this software works with. Ableton and Live are
+trademarks of Ableton AG. This project is not affiliated with or endorsed by either
+company and contains no Novation code or files.

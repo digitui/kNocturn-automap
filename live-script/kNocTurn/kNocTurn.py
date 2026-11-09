@@ -1,7 +1,7 @@
 """
-Nocturn - Ableton Live remote script with native Automap (no wrapper plug-in needed).
+kNocTurn - Ableton Live remote script with native NightCap (no wrapper plug-in needed).
 
-  Control         CC        Automap mode (default)                    Mixer mode
+  Control         CC        NightCap mode (default)                    Mixer mode
   Encoders 1-8    64-71     the 8 parameters on the current page      volumes of the 8 tracks in the red box
   Encoder touch   96-103    show name/value, pick knob for Learn      -
   Speed dial      74        fine-adjust the last touched parameter     select track
@@ -12,20 +12,20 @@ Nocturn - Ableton Live remote script with native Automap (no wrapper plug-in nee
   Page - / +      122/123   previous / next page                      move red box
   User / FX       124/125   previous / next device on the track
   Inst            126       lock to this device (stays while you select other tracks)
-  Mixer           127       switch Automap / Mixer mode
+  Mixer           127       switch NightCap / Mixer mode
 
 Works with Live devices, VST and AU plug-ins directly. If a plug-in shows no parameters,
 click Live's "Configure" button on the device once (Live only exposes up to 128 plug-in
 parameters automatically).
 
-If a "Nocturn Automap" wrapper plug-in is selected, the Nocturn is handed to it instead.
+If a "kNocTurn NightCap" wrapper plug-in is selected, the kNocTurn is handed to it instead.
 """
 import json
 import os
 import time
 import traceback
 
-_DEBUG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nocturn_debug.log')
+_DEBUG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'knocturn_debug.log')
 
 
 def debug(msg):
@@ -48,7 +48,7 @@ from _Framework.DeviceComponent import DeviceComponent
 from _Framework.MixerComponent import MixerComponent
 from _Framework.SessionComponent import SessionComponent
 
-from .Automap import NativeAutomap
+from .NightCap import NightCapEngine
 
 CHANNEL = 0
 ENCODER_CCS = list(range(64, 72))
@@ -58,26 +58,26 @@ CROSSFADER_CC = 72
 TOP_BUTTON_CCS = list(range(112, 120))
 LEARN, VIEW, PAGE_DOWN, PAGE_UP, USER, FX, INST, MIXER = range(120, 128)
 
-SYSEX_HEADER = (0xF0, 0x00, 0x20, 0x29, 0x7F)
+SYSEX_HEADER = (0xF0, 0x7D, 0x4B, 0x4E, 0x43)
 SYSEX_SET_MODE = 0x01
 SYSEX_MODE_IS = 0x02
 SYSEX_HUD = 0x10
 HUD_CHUNK = 96
-AUTOMAP_FOCUS_PARAM = 'Automap Focus'
+NIGHTCAP_FOCUS_PARAM = 'NightCap Focus'
 LONG_PRESS = 1.5
 
-MODE_AUTOMAP, MODE_MIXER = 0, 1
+MODE_NIGHTCAP, MODE_MIXER = 0, 1
 
 
 def _relative(value):
     return value if value < 64 else value - 128
 
 
-class Nocturn(ControlSurface):
+class kNocTurn(ControlSurface):
 
     def __init__(self, c_instance):
         ControlSurface.__init__(self, c_instance)
-        debug('---- script starting (Live loaded Nocturn) ----')
+        debug('---- script starting (Live loaded kNocTurn) ----')
         try:
             self._init_surface()
             debug('startup complete')
@@ -86,7 +86,7 @@ class Nocturn(ControlSurface):
             raise
 
     def _init_surface(self):
-        self._mode = MODE_AUTOMAP
+        self._mode = MODE_NIGHTCAP
         self._wrapper_active = False
         self._learn_pressed_at = None
         self._hud_dirty = False
@@ -97,12 +97,12 @@ class Nocturn(ControlSurface):
         with self.component_guard():
             self._create_controls()
             self._create_components()
-            self._automap = NativeAutomap(self, self._encoders, self._crossfader)
+            self._nightcap = NightCapEngine(self, self._encoders, self._crossfader)
             self._update_mode()
         self.song().add_appointed_device_listener(self._on_appointed_device_changed)
         self._set_bridge_mode(0)
-        self.show_message('Nocturn connected (native Automap)')
-        self.log_message('Nocturn: native Automap script with HUD loaded')
+        self.show_message('kNocTurn connected (native NightCap)')
+        self.log_message('kNocTurn: native NightCap script with HUD loaded')
         self._on_appointed_device_changed()
 
     # ------------------------------------------------------------------ setup
@@ -157,8 +157,8 @@ class Nocturn(ControlSurface):
         def listener(value):
             if self._wrapper_active:
                 return
-            if self._mode == MODE_AUTOMAP:
-                self._automap.touch(slot, value > 0)
+            if self._mode == MODE_NIGHTCAP:
+                self._nightcap.touch(slot, value > 0)
             else:
                 self._mixer_touch = slot if value else (-1 if self._mixer_touch == slot else self._mixer_touch)
                 self.request_hud(bool(value))
@@ -166,14 +166,14 @@ class Nocturn(ControlSurface):
 
     def _make_page_listener(self, page):
         def listener(value):
-            if value and self._mode == MODE_AUTOMAP and not self._wrapper_active:
-                self._automap.set_page(page)
+            if value and self._mode == MODE_NIGHTCAP and not self._wrapper_active:
+                self._nightcap.set_page(page)
                 self._update_button_leds()
         return listener
 
     # ------------------------------------------------------------------ modes
     def _update_mode(self):
-        automap = self._mode == MODE_AUTOMAP and not self._wrapper_active
+        nightcap = self._mode == MODE_NIGHTCAP and not self._wrapper_active
         mixer = self._mode == MODE_MIXER and not self._wrapper_active
         for i in range(8):
             strip = self._mixer.channel_strip(i)
@@ -181,17 +181,17 @@ class Nocturn(ControlSurface):
             strip.set_mute_button(self._top_buttons[i] if mixer else None)
         self._session.set_track_bank_buttons(self._page_up if mixer else None,
                                              self._page_down if mixer else None)
-        self._automap.set_active(automap)
+        self._nightcap.set_active(nightcap)
         self._update_crossfader()
         self._update_button_leds()
         if self._wrapper_active:
-            self.show_message('Nocturn: Automap wrapper in control (press Mixer to return)')
+            self.show_message('kNocTurn: NightCap wrapper in control (press Mixer to return)')
         self.request_hud(True)
         self.request_rebuild_midi_map()
 
     def _update_crossfader(self):
-        param = self._automap.crossfader_param() if not self._wrapper_active else None
-        learning = self._automap.learn_armed and self._mode == MODE_AUTOMAP
+        param = self._nightcap.crossfader_param() if not self._wrapper_active else None
+        learning = self._nightcap.learn_armed and self._mode == MODE_NIGHTCAP
         if param is not None:
             self._mixer.set_crossfader_control(None)
             self._crossfader.connect_to(param)
@@ -202,18 +202,18 @@ class Nocturn(ControlSurface):
     def _update_button_leds(self):
         if self._wrapper_active:
             return
-        automap = self._mode == MODE_AUTOMAP
-        if automap:
+        nightcap = self._mode == MODE_NIGHTCAP
+        if nightcap:
             for i, btn in enumerate(self._top_buttons):
-                btn.send_value(127 if i == self._automap.page else 0, True)
-            self._page_down.send_value(127 if self._automap.page > 0 else 0, True)
-            self._page_up.send_value(127 if self._automap.page < self._automap.num_pages - 1 else 0, True)
-        self._learn.send_value(127 if (automap and self._automap.learn_armed) else 0, True)
-        self._inst.send_value(127 if self._automap.locked else 0, True)
+                btn.send_value(127 if i == self._nightcap.page else 0, True)
+            self._page_down.send_value(127 if self._nightcap.page > 0 else 0, True)
+            self._page_up.send_value(127 if self._nightcap.page < self._nightcap.num_pages - 1 else 0, True)
+        self._learn.send_value(127 if (nightcap and self._nightcap.learn_armed) else 0, True)
+        self._inst.send_value(127 if self._nightcap.locked else 0, True)
         self._mixer_button.send_value(127 if self._mode == MODE_MIXER else 0, True)
 
-    def automap_state_changed(self):
-        """Called by NativeAutomap after learn finishes / pages change."""
+    def nightcap_state_changed(self):
+        """Called by NightCapEngine after learn finishes / pages change."""
         with self.component_guard():
             self._update_crossfader()
             self._update_button_leds()
@@ -227,12 +227,12 @@ class Nocturn(ControlSurface):
             self._set_bridge_mode(0)
             self._set_wrapper(False)
             return
-        self._mode = MODE_MIXER if self._mode == MODE_AUTOMAP else MODE_AUTOMAP
-        self.show_message('Nocturn: %s mode' % ('Mixer' if self._mode == MODE_MIXER else 'Automap'))
+        self._mode = MODE_MIXER if self._mode == MODE_NIGHTCAP else MODE_NIGHTCAP
+        self.show_message('kNocTurn: %s mode' % ('Mixer' if self._mode == MODE_MIXER else 'NightCap'))
         self._update_mode()
 
     def _on_learn(self, value):
-        if self._mode != MODE_AUTOMAP or self._wrapper_active:
+        if self._mode != MODE_NIGHTCAP or self._wrapper_active:
             return
         if value:
             self._learn_pressed_at = time.time()
@@ -240,25 +240,25 @@ class Nocturn(ControlSurface):
         held = self._learn_pressed_at is not None and time.time() - self._learn_pressed_at >= LONG_PRESS
         self._learn_pressed_at = None
         if held:
-            if self._automap.learn_armed:
-                self._automap.toggle_learn()
-            self._automap.reset_mapping()
+            if self._nightcap.learn_armed:
+                self._nightcap.toggle_learn()
+            self._nightcap.reset_mapping()
         else:
-            self._automap.toggle_learn()
-        self.automap_state_changed()
+            self._nightcap.toggle_learn()
+        self.nightcap_state_changed()
 
     def _on_view(self, value):
-        if value and self._mode == MODE_AUTOMAP and not self._wrapper_active:
-            self._automap.reset_last()
+        if value and self._mode == MODE_NIGHTCAP and not self._wrapper_active:
+            self._nightcap.reset_last()
 
     def _on_page_step(self, value, step):
-        if value and self._mode == MODE_AUTOMAP and not self._wrapper_active:
-            self._automap.set_page(self._automap.page + step)
+        if value and self._mode == MODE_NIGHTCAP and not self._wrapper_active:
+            self._nightcap.set_page(self._nightcap.page + step)
             self._update_button_leds()
 
     def _on_inst(self, value):
         if value and not self._wrapper_active:
-            self._automap.toggle_lock()
+            self._nightcap.toggle_lock()
             self._update_button_leds()
 
     def _on_speed_dial(self, value):
@@ -267,8 +267,8 @@ class Nocturn(ControlSurface):
         delta = _relative(value)
         if not delta:
             return
-        if self._mode == MODE_AUTOMAP:
-            self._automap.fine_adjust(delta)
+        if self._mode == MODE_NIGHTCAP:
+            self._nightcap.fine_adjust(delta)
             return
         song = self.song()
         tracks = list(song.visible_tracks) + list(song.return_tracks) + [song.master_track]
@@ -279,8 +279,8 @@ class Nocturn(ControlSurface):
         song.view.selected_track = tracks[max(0, min(len(tracks) - 1, idx + (1 if delta > 0 else -1)))]
 
     def _on_crossfader(self, value):
-        if self._mode == MODE_AUTOMAP and not self._wrapper_active and self._automap.learn_armed:
-            self._automap.crossfader_moved()
+        if self._mode == MODE_NIGHTCAP and not self._wrapper_active and self._nightcap.learn_armed:
+            self._nightcap.crossfader_moved()
 
     def _on_device_step(self, value, step, button):
         button.send_value(127 if value else 0, True)
@@ -319,7 +319,7 @@ class Nocturn(ControlSurface):
             slots.append([t.name, str(vol) + ('  (muted)' if t.mute else ''), round((vol.value - vol.min) / span, 4)])
         slots += [None] * (8 - len(slots))
         return {'t': 'Mixer', 'p': 'Tracks %d - %d' % (offset + 1, offset + 8),
-                'sub': 'Encoders: volume   Buttons: mute   Page -/+: move tracks   Mixer: back to Automap',
+                'sub': 'Encoders: volume   Buttons: mute   Page -/+: move tracks   Mixer: back to NightCap',
                 's': slots, 'x': None, 'touch': self._mixer_touch, 'learn': False, 'lt': -1}
 
     def _send_hud(self):
@@ -328,7 +328,7 @@ class Nocturn(ControlSurface):
         elif self._mode == MODE_MIXER:
             state = self._mixer_hud_state()
         else:
-            state = self._automap.hud_state()
+            state = self._nightcap.hud_state()
         pop = self._hud_pop
         self._hud_dirty = self._hud_pop = False
         key = json.dumps(state, sort_keys=True)
@@ -343,7 +343,7 @@ class Nocturn(ControlSurface):
         if not self._hud_logged:
             self._hud_logged = True
             debug('first HUD sent: %d bytes in %d SysEx messages: %s' % (len(data), len(chunks), data[:120]))
-            self.log_message('Nocturn: HUD data sent to NocturnBridge (%d bytes in %d SysEx messages)' % (len(data), len(chunks)))
+            self.log_message('kNocTurn: HUD data sent to kNocTurnBridge (%d bytes in %d SysEx messages)' % (len(data), len(chunks)))
 
     def update_display(self):
         ControlSurface.update_display(self)
@@ -358,7 +358,7 @@ class Nocturn(ControlSurface):
             except Exception as e:
                 self._hud_dirty = False
                 debug('HUD ERROR:\n' + traceback.format_exc())
-                self.log_message('Nocturn HUD error: %s' % e)
+                self.log_message('kNocTurn HUD error: %s' % e)
 
     # ------------------------------------------------------------------ device following / wrapper handoff
     def _on_appointed_device_changed(self):
@@ -371,7 +371,7 @@ class Nocturn(ControlSurface):
             if device is None or device.class_name not in ('PluginDevice', 'AuPluginDevice'):
                 return None
             for p in device.parameters:
-                if p.name == AUTOMAP_FOCUS_PARAM:
+                if p.name == NIGHTCAP_FOCUS_PARAM:
                     return p
         except Exception:
             pass
@@ -396,7 +396,7 @@ class Nocturn(ControlSurface):
             self._set_bridge_mode(0)
             self._set_wrapper(False)
         with self.component_guard():
-            self._automap.appointed_device_changed(device)
+            self._nightcap.appointed_device_changed(device)
             self._update_crossfader()
             self._update_button_leds()
 
@@ -422,7 +422,7 @@ class Nocturn(ControlSurface):
             self.song().remove_appointed_device_listener(self._on_appointed_device_changed)
         except Exception:
             pass
-        self._automap.disconnect()
+        self._nightcap.disconnect()
         self._set_bridge_mode(0)
         for btn in self._top_buttons + (self._learn, self._view, self._page_down, self._page_up,
                                         self._user, self._fx, self._inst, self._mixer_button):

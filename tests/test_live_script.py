@@ -50,19 +50,19 @@ class Song(object):
         self.appointed_device = d
         for cb in self.al: cb()
 
-import Nocturn.Automap as AM
+import kNocTurn.NightCap as AM
 AM.MAPPING_DIR = os.path.join(HERE, 'mappings_test')
 shutil.rmtree(AM.MAPPING_DIR, ignore_errors=True)
-from Nocturn.Nocturn import Nocturn
+from kNocTurn.kNocTurn import kNocTurn
 
 serum = Device('Serum', 20); eq = Device('EQ Eight', 5, 'Eq8'); simpler = Device('Simpler', 7, 'OriginalSimpler')
 song = Song([Track([serum, eq]), Track([simpler])])
-s = Nocturn(song); s.tick()
-assert s.midi[0] == (0xF0, 0, 0x20, 0x29, 0x7F, 1, 0, 0xF7)
+s = kNocTurn(song); s.tick()
+assert s.midi[0] == (0xF0, 0x7D, 0x4B, 0x4E, 0x43, 1, 0, 0xF7)
 def ok(msg): print('ok:', msg)
 
 song.view.select_device(serum); s.tick()
-am = s._automap
+am = s._nightcap
 assert am.num_pages == 3 and s._encoders[0].mapped is serum.parameters[1]; ok('plug-in params paged: 20 params -> 3 pages, knob1 = P0')
 s._top_buttons[2].receive(127); assert am.page == 2 and s._encoders[3].mapped is serum.parameters[20] and s._encoders[4].mapped is None
 ok('page 3 maps P16..P19, empty slots released')
@@ -107,7 +107,7 @@ assert os.listdir(AM.MAPPING_DIR) == [] and s._crossfader.mapped is None; ok('lo
 
 # mixer mode
 s._mixer_button.receive(127); assert s._mixer.channel_strip(0).vol is s._encoders[0] and s._encoders[0].mapped is None; ok('mixer mode')
-s._mixer_button.receive(127); assert s._encoders[0].mapped is serum.parameters[1]; ok('back to automap mode')
+s._mixer_button.receive(127); assert s._encoders[0].mapped is serum.parameters[1]; ok('back to nightcap mode')
 
 # parameters reconfigured (Live Configure) -> rebuild
 serum.parameters.append(Param('Serum New')); [cb() for cb in serum.pl]; s.tick(); assert am.num_pages == 3; ok('param list change rebuilds pages')
@@ -115,7 +115,7 @@ serum.parameters.append(Param('Serum New')); [cb() for cb in serum.pl]; s.tick()
 import json
 def hud():
     s.midi = []; s.update_display()
-    msgs = [m for m in s.midi if m[:6] == (0xF0, 0, 0x20, 0x29, 0x7F, 0x10)]
+    msgs = [m for m in s.midi if m[:6] == (0xF0, 0x7D, 0x4B, 0x4E, 0x43, 0x10)]
     if not msgs: return None
     assert all(len(m) <= 9 + 96 and all(b < 0x80 for b in m[1:-1]) for m in msgs)
     assert [m[6] for m in msgs] == list(range(len(msgs))) and all(m[7] == len(msgs) for m in msgs)
@@ -133,7 +133,7 @@ s._mixer_button.receive(127); h = hud(); assert h['t'] == 'Mixer' and h['s'][0][
 s._mixer_button.receive(127); s._wrapper_active = True; s.request_hud(); assert hud()['hide'] is True; s._wrapper_active = False; ok('HUD hidden when wrapper active')
 s.disconnect(); print('ALL LIVE SCRIPT TESTS PASSED')
 try:
-    os.remove(os.path.join(HERE, '..', 'live-script', 'Nocturn', 'nocturn_debug.log'))
+    os.remove(os.path.join(HERE, '..', 'live-script', 'kNocTurn', 'knocturn_debug.log'))
 except OSError:
     pass
 shutil.rmtree(AM.MAPPING_DIR, ignore_errors=True)

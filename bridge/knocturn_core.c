@@ -1,5 +1,5 @@
-/* nocturn_core.c - see nocturn_core.h */
-#include "nocturn_core.h"
+/* knocturn_core.c - see knocturn_core.h */
+#include "knocturn_core.h"
 #include <string.h>
 
 void nc_reset_cache(nc_state *s) {
@@ -23,7 +23,7 @@ void nc_flush(nc_state *s) {
     }
 }
 
-/* NocturnOutputOSX::Write(const MIDI::Event&): dedupe per control, pairs (cc,val), max 8 bytes */
+/* original driver output (Write)(const MIDI::Event&): dedupe per control, pairs (cc,val), max 8 bytes */
 void nc_write(nc_state *s, uint8_t cc, uint8_t value) {
     if (cc > 0x7F) return;
     if (s->out_cache[cc] == value) return;
@@ -38,7 +38,7 @@ static void raw_packet(nc_state *s, const uint8_t *p, size_t n) {
     if (s->usb) s->usb(s->ctx, p, n);
 }
 
-/* NocturnOutputOSX::Initialise */
+/* original driver output (Initialise) */
 #ifndef NC_SLEEP_MS
 #include <unistd.h>
 #define NC_SLEEP_MS(ms) usleep((ms) * 1000)
@@ -68,7 +68,7 @@ static void local_led(nc_state *s, uint8_t cc, uint8_t v) {
 
 static int rel_to_delta(int v) { return v <= 0x40 ? v : v - 0x80; } /* as in Translate() */
 
-/* NocturnControlTable::HandleEncoder: speed-sensitive scaling */
+/* original control table (HandleEncoder): speed-sensitive scaling */
 static int accelerate(nc_state *s, int idx, int delta, uint64_t now_ns) {
     uint64_t dt_ms = s->last_time[idx] ? (now_ns - s->last_time[idx]) / 1000000ULL : 1000;
     s->last_time[idx] = now_ns;
@@ -120,7 +120,7 @@ static void handle_control(nc_state *s, uint8_t cc, uint8_t val, uint64_t now) {
     emit(s, cc, val);                                 /* touches etc: pass through */
 }
 
-/* NocturnInputOSX::OnData */
+/* original driver input (OnData) */
 void nc_on_usb_data(nc_state *s, const uint8_t *p, size_t n, uint64_t now) {
     while (n > 0) {
         uint8_t b = p[0];
@@ -170,9 +170,9 @@ void nc_set_mode(nc_state *s, int port) {
 
 int nc_on_host_sysex(nc_state *s, int port, const uint8_t *m, size_t n) {
     (void)port;
-    if (n == 8 && m[0] == 0xF0 && m[1] == 0x00 && m[2] == 0x20 && m[3] == 0x29 && m[4] == 0x7F &&
+    if (n == 8 && m[0] == 0xF0 && m[1] == 0x7D && m[2] == 0x4B && m[3] == 0x4E && m[4] == 0x43 &&
         m[5] == NC_SYSEX_SET_MODE && m[7] == 0xF7) {
-        nc_set_mode(s, m[6] ? NC_PORT_AUTOMAP : NC_PORT_MAIN);
+        nc_set_mode(s, m[6] ? NC_PORT_NIGHTCAP : NC_PORT_MAIN);
         return 1;
     }
     return 0;

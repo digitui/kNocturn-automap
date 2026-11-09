@@ -6,7 +6,7 @@ namespace Colours_
 {
     const Colour bg      { 0xff1d1f24 };
     const Colour panel   { 0xff2a2d34 };
-    const Colour accent  { 0xffff7a1a };   // Novation orange
+    const Colour accent  { 0xffff7a1a };   // accent orange
     const Colour learn   { 0xffe0405a };
     const Colour text    { 0xffe8e8ea };
     const Colour dim     { 0xff8b8f99 };
@@ -52,7 +52,7 @@ void PluginScanner::timerCallback()
 }
 
 //============================================================================== slot display
-void SlotDisplay::set (const NocturnAutomapProcessor::SlotInfo& i, int number, bool t, bool l)
+void SlotDisplay::set (const NightCapProcessor::SlotInfo& i, int number, bool t, bool l)
 {
     info = i;
     caption = number > 0 ? String (number) : String ("X-fade");
@@ -95,7 +95,7 @@ void SlotDisplay::paint (Graphics& g)
 }
 
 //============================================================================== editor
-NocturnAutomapEditor::NocturnAutomapEditor (NocturnAutomapProcessor& p)
+NightCapEditor::NightCapEditor (NightCapProcessor& p)
     : AudioProcessorEditor (p), proc (p), scanner (p.getCatalog())
 {
     for (auto* b : { &loadButton, &learnButton, &prevPage, &nextPage, &focusButton, &menuButton })
@@ -118,7 +118,7 @@ NocturnAutomapEditor::NocturnAutomapEditor (NocturnAutomapProcessor& p)
     statusLabel.setColour (Label::textColourId, Colours_::dim);
     statusLabel.setJustificationType (Justification::centredRight);
 
-    for (int i = 0; i <= NocturnAutomapProcessor::slotsPerPage; ++i)
+    for (int i = 0; i <= NightCapProcessor::slotsPerPage; ++i)
     {
         addAndMakeVisible (slots[i]);
         slots[i].onClick = [this, i]
@@ -132,20 +132,20 @@ NocturnAutomapEditor::NocturnAutomapEditor (NocturnAutomapProcessor& p)
     learnButton.onClick = [this] { proc.setLearnArmed (! proc.isLearnArmed()); };
     prevPage.onClick    = [this] { proc.setPage (proc.getPage() - 1); };
     nextPage.onClick    = [this] { proc.setPage (proc.getPage() + 1); };
-    focusButton.onClick = [this] { proc.claimNocturn(); };
+    focusButton.onClick = [this] { proc.claimHardware(); };
     menuButton.onClick  = [this]
     {
         PopupMenu m;
         m.addItem (1, "Reset mapping to all parameters", proc.getHosted() != nullptr);
         m.addItem (2, "Rescan plug-ins");
         m.addItem (3, "Unload plug-in", proc.getHosted() != nullptr);
-        m.addItem (4, "Give Nocturn back to Live / DAW");
+        m.addItem (4, "Give kNocTurn back to Live / DAW");
         m.showMenuAsync (PopupMenu::Options().withTargetComponent (menuButton), [this] (int r)
         {
             if (r == 1) proc.resetMapping();
             if (r == 2) { scanner.start(); refresh(); }
             if (r == 3) proc.unloadPlugin();
-            if (r == 4) proc.releaseNocturn();
+            if (r == 4) proc.releaseHardware();
         });
     };
 
@@ -160,11 +160,11 @@ NocturnAutomapEditor::NocturnAutomapEditor (NocturnAutomapProcessor& p)
     refresh();
     startTimerHz (15);
 
-    // Opening the wrapper's window gives it the Nocturn, like Automap did.
-    proc.claimNocturn();
+    // Opening the wrapper's window gives it the kNocTurn, like NightCap did.
+    proc.claimHardware();
 }
 
-NocturnAutomapEditor::~NocturnAutomapEditor()
+NightCapEditor::~NightCapEditor()
 {
     proc.hostedChanged.removeChangeListener (this);
     proc.displayChanged.removeChangeListener (this);
@@ -173,7 +173,7 @@ NocturnAutomapEditor::~NocturnAutomapEditor()
     hostedEditor.reset();
 }
 
-void NocturnAutomapEditor::rebuildHostedEditor()
+void NightCapEditor::rebuildHostedEditor()
 {
     if (hostedEditor != nullptr)
     {
@@ -192,7 +192,7 @@ void NocturnAutomapEditor::rebuildHostedEditor()
     updateSize();
 }
 
-void NocturnAutomapEditor::updateSize()
+void NightCapEditor::updateSize()
 {
     const int w = jmax (720, hostedEditor != nullptr ? hostedEditor->getWidth() : 0);
     const int h = headerHeight + (hostedEditor != nullptr ? hostedEditor->getHeight() : 160);
@@ -200,21 +200,21 @@ void NocturnAutomapEditor::updateSize()
     else resized();
 }
 
-void NocturnAutomapEditor::componentMovedOrResized (Component& c, bool, bool wasResized)
+void NightCapEditor::componentMovedOrResized (Component& c, bool, bool wasResized)
 {
     if (wasResized && &c == hostedEditor.get())
         updateSize();
 }
 
-void NocturnAutomapEditor::changeListenerCallback (ChangeBroadcaster* b)
+void NightCapEditor::changeListenerCallback (ChangeBroadcaster* b)
 {
     if (b == &proc.hostedChanged) rebuildHostedEditor();
     refresh();
 }
 
-void NocturnAutomapEditor::timerCallback() { refresh(); }
+void NightCapEditor::timerCallback() { refresh(); }
 
-void NocturnAutomapEditor::refresh()
+void NightCapEditor::refresh()
 {
     const bool loaded = proc.getHosted() != nullptr;
     pluginName.setText (loaded ? proc.getHostedName() : String ("No plug-in loaded"), dontSendNotification);
@@ -224,22 +224,22 @@ void NocturnAutomapEditor::refresh()
     String status;
     auto& link = proc.getLink();
     if (scanner.isScanning())         status = scanner.getStatus();
-    else if (! link.isConnected())    status = "NocturnBridge not running";
-    else if (! proc.hasNocturnFocus()) status = "Nocturn: another Automap instance";
-    else if (! link.automapOwnsHardware()) status = "Nocturn: controlling Live";
-    else                              status = "Nocturn: in control";
+    else if (! link.isConnected())    status = "kNocTurnBridge not running";
+    else if (! proc.hasHardwareFocus()) status = "kNocTurn: another NightCap instance";
+    else if (! link.nightcapOwnsHardware()) status = "kNocTurn: controlling Live";
+    else                              status = "kNocTurn: in control";
     if (proc.isLearnArmed())
-        status = "LEARN: touch a Nocturn knob (or click a slot), then move a control in the plug-in";
+        status = "LEARN: touch a kNocTurn knob (or click a slot), then move a control in the plug-in";
     statusLabel.setText (status, dontSendNotification);
-    focusButton.setEnabled (! (proc.hasNocturnFocus() && link.automapOwnsHardware()));
+    focusButton.setEnabled (! (proc.hasHardwareFocus() && link.nightcapOwnsHardware()));
 
     const int touched = proc.getTouchedSlot(), learnSlot = proc.isLearnArmed() ? proc.getLearnSlot() : -2;
-    for (int i = 0; i <= NocturnAutomapProcessor::slotsPerPage; ++i)
-        slots[i].set (proc.getSlotInfo (i), i < NocturnAutomapProcessor::slotsPerPage ? i + 1 : 0,
+    for (int i = 0; i <= NightCapProcessor::slotsPerPage; ++i)
+        slots[i].set (proc.getSlotInfo (i), i < NightCapProcessor::slotsPerPage ? i + 1 : 0,
                       i == touched, i == learnSlot);
 }
 
-void NocturnAutomapEditor::showPluginMenu()
+void NightCapEditor::showPluginMenu()
 {
     auto& cat = proc.getCatalog();
     if (cat.list.getNumTypes() == 0 && ! scanner.isScanning())
@@ -260,17 +260,17 @@ void NocturnAutomapEditor::showPluginMenu()
         if (! isPositiveAndBelow (idx, types.size())) return;
         String err;
         if (! proc.loadPlugin (types.getReference (idx), err))
-            AlertWindow::showMessageBoxAsync (MessageBoxIconType::WarningIcon, "Nocturn Automap",
+            AlertWindow::showMessageBoxAsync (MessageBoxIconType::WarningIcon, "kNocTurn NightCap",
                                               "Could not load " + types.getReference (idx).name + "\n" + err);
     });
 }
 
-void NocturnAutomapEditor::mouseDown (const MouseEvent&)
+void NightCapEditor::mouseDown (const MouseEvent&)
 {
-    if (! proc.hasNocturnFocus()) proc.claimNocturn();
+    if (! proc.hasHardwareFocus()) proc.claimHardware();
 }
 
-void NocturnAutomapEditor::paint (Graphics& g)
+void NightCapEditor::paint (Graphics& g)
 {
     g.fillAll (Colours_::bg);
     g.setColour (Colours_::accent);
@@ -284,7 +284,7 @@ void NocturnAutomapEditor::paint (Graphics& g)
     }
 }
 
-void NocturnAutomapEditor::resized()
+void NightCapEditor::resized()
 {
     auto r = getLocalBounds();
     auto header = r.removeFromTop (headerHeight).reduced (8, 6);
@@ -307,7 +307,7 @@ void NocturnAutomapEditor::resized()
     statusLabel.setBounds (header.removeFromTop (18));
     header.removeFromTop (4);
 
-    const int n = NocturnAutomapProcessor::slotsPerPage + 1;
+    const int n = NightCapProcessor::slotsPerPage + 1;
     const int w = header.getWidth() / n;
     for (int i = 0; i < n; ++i)
         slots[i].setBounds (header.removeFromLeft (i == n - 1 ? header.getWidth() : w));

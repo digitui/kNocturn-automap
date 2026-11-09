@@ -41,7 +41,7 @@ float ProxyParameter::getValueForText (const String& t) const
 }
 
 //============================================================================== processor
-AudioProcessor::BusesProperties NocturnAutomapProcessor::makeBuses()
+AudioProcessor::BusesProperties NightCapProcessor::makeBuses()
 {
    #if JucePlugin_IsSynth
     return AudioProcessor::BusesProperties().withOutput ("Output", AudioChannelSet::stereo(), true);
@@ -51,7 +51,7 @@ AudioProcessor::BusesProperties NocturnAutomapProcessor::makeBuses()
    #endif
 }
 
-NocturnAutomapProcessor::NocturnAutomapProcessor() : AudioProcessor (makeBuses())
+NightCapProcessor::NightCapProcessor() : AudioProcessor (makeBuses())
 {
     std::fill (std::begin (ledCache), std::end (ledCache), -1);
     for (auto& t : proxyTargets) t = -1;
@@ -66,7 +66,7 @@ NocturnAutomapProcessor::NocturnAutomapProcessor() : AudioProcessor (makeBuses()
     startTimerHz (30);
 }
 
-NocturnAutomapProcessor::~NocturnAutomapProcessor()
+NightCapProcessor::~NightCapProcessor()
 {
     alive->store (false);
     stopTimer();
@@ -78,7 +78,7 @@ NocturnAutomapProcessor::~NocturnAutomapProcessor()
     graveyard.clear();
 }
 
-bool NocturnAutomapProcessor::isBusesLayoutSupported (const BusesLayout& l) const
+bool NightCapProcessor::isBusesLayoutSupported (const BusesLayout& l) const
 {
     const auto out = l.getMainOutputChannelSet();
     if (out != AudioChannelSet::mono() && out != AudioChannelSet::stereo()) return false;
@@ -88,7 +88,7 @@ bool NocturnAutomapProcessor::isBusesLayoutSupported (const BusesLayout& l) cons
     return true;
 }
 
-void NocturnAutomapProcessor::configureBuses (AudioPluginInstance& inst)
+void NightCapProcessor::configureBuses (AudioPluginInstance& inst)
 {
     auto l = inst.getBusesLayout();
     const auto want = getMainBusNumOutputChannels() == 1 ? AudioChannelSet::mono() : AudioChannelSet::stereo();
@@ -100,7 +100,7 @@ void NocturnAutomapProcessor::configureBuses (AudioPluginInstance& inst)
         inst.setBusesLayout (l);
 }
 
-void NocturnAutomapProcessor::prepareHosted (AudioPluginInstance& inst)
+void NightCapProcessor::prepareHosted (AudioPluginInstance& inst)
 {
     inst.setRateAndBufferSizeDetails (sampleRate, blockSize);
     inst.setNonRealtime (isNonRealtime());
@@ -110,7 +110,7 @@ void NocturnAutomapProcessor::prepareHosted (AudioPluginInstance& inst)
     work.setSize (ch, jmax (blockSize, 32), false, true, false);
 }
 
-void NocturnAutomapProcessor::prepareToPlay (double sr, int bs)
+void NightCapProcessor::prepareToPlay (double sr, int bs)
 {
     sampleRate = sr;
     blockSize = bs;
@@ -124,19 +124,19 @@ void NocturnAutomapProcessor::prepareToPlay (double sr, int bs)
         work.setSize (2, jmax (bs, 32), false, true, false);
 }
 
-void NocturnAutomapProcessor::releaseResources()
+void NightCapProcessor::releaseResources()
 {
     prepared = false;
     if (auto* inst = current.load()) inst->releaseResources();
 }
 
-double NocturnAutomapProcessor::getTailLengthSeconds() const
+double NightCapProcessor::getTailLengthSeconds() const
 {
     if (auto* inst = current.load()) return inst->getTailLengthSeconds();
     return 0.0;
 }
 
-void NocturnAutomapProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
+void NightCapProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
 {
     ScopedNoDenormals noDenormals;
     auto* inst = current.load();
@@ -175,7 +175,7 @@ void NocturnAutomapProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuff
 }
 
 //============================================================================== hosting
-AudioProcessorParameter* NocturnAutomapProcessor::getHostedParam (int index) const
+AudioProcessorParameter* NightCapProcessor::getHostedParam (int index) const
 {
     if (auto* inst = current.load())
     {
@@ -185,12 +185,12 @@ AudioProcessorParameter* NocturnAutomapProcessor::getHostedParam (int index) con
     return nullptr;
 }
 
-String NocturnAutomapProcessor::getHostedName() const
+String NightCapProcessor::getHostedName() const
 {
     return current.load() != nullptr ? hostedDesc.name : String();
 }
 
-bool NocturnAutomapProcessor::loadPlugin (const PluginDescription& desc, String& error)
+bool NightCapProcessor::loadPlugin (const PluginDescription& desc, String& error)
 {
     jassert (MessageManager::existsAndIsCurrentThread());
     auto inst = catalog->formats.createPluginInstance (desc, sampleRate, blockSize, error);
@@ -215,11 +215,11 @@ bool NocturnAutomapProcessor::loadPlugin (const PluginDescription& desc, String&
     updateHostDisplay (AudioProcessorListener::ChangeDetails().withParameterInfoChanged (true).withLatencyChanged (true));
     hostedChanged.sendSynchronousChangeMessage();
     displayChanged.sendChangeMessage();
-    nocturnRepaintLeds();
+    hardwareRepaintLeds();
     return true;
 }
 
-void NocturnAutomapProcessor::unloadPlugin()
+void NightCapProcessor::unloadPlugin()
 {
     auto* inst = current.exchange (nullptr);
     if (inst == nullptr) return;
@@ -234,10 +234,10 @@ void NocturnAutomapProcessor::unloadPlugin()
     setLatencySamples (0);
     updateHostDisplay (AudioProcessorListener::ChangeDetails().withParameterInfoChanged (true));
     displayChanged.sendChangeMessage();
-    nocturnRepaintLeds();
+    hardwareRepaintLeds();
 }
 
-void NocturnAutomapProcessor::buildProxyMap (AudioPluginInstance& inst)
+void NightCapProcessor::buildProxyMap (AudioPluginInstance& inst)
 {
     auto& ps = inst.getParameters();
     hostToProxy.assign ((size_t) ps.size(), -1);
@@ -251,7 +251,7 @@ void NocturnAutomapProcessor::buildProxyMap (AudioPluginInstance& inst)
     while (next < numProxies) proxyTargets[(size_t) next++] = -1;
 }
 
-void NocturnAutomapProcessor::audioProcessorChanged (AudioProcessor* p, const AudioProcessorListener::ChangeDetails& d)
+void NightCapProcessor::audioProcessorChanged (AudioProcessor* p, const AudioProcessorListener::ChangeDetails& d)
 {
     if (d.latencyChanged)
     {
@@ -263,28 +263,28 @@ void NocturnAutomapProcessor::audioProcessorChanged (AudioProcessor* p, const Au
     }
 }
 
-void NocturnAutomapProcessor::audioProcessorParameterChanged (AudioProcessor*, int index, float v)
+void NightCapProcessor::audioProcessorParameterChanged (AudioProcessor*, int index, float v)
 {
     if (isPositiveAndBelow (index, (int) hostToProxy.size()) && hostToProxy[(size_t) index] >= 0)
         proxies.getUnchecked (hostToProxy[(size_t) index])->sendValueChangedMessageToListeners (v);
-    if (! writingFromNocturn)
+    if (! writingFromHardware)
         lastUiParam = index;   // for learn (picked up on the message thread)
 }
 
-void NocturnAutomapProcessor::audioProcessorParameterChangeGestureBegin (AudioProcessor*, int index)
+void NightCapProcessor::audioProcessorParameterChangeGestureBegin (AudioProcessor*, int index)
 {
     if (isPositiveAndBelow (index, (int) hostToProxy.size()) && hostToProxy[(size_t) index] >= 0)
         proxies.getUnchecked (hostToProxy[(size_t) index])->beginChangeGesture();
 }
 
-void NocturnAutomapProcessor::audioProcessorParameterChangeGestureEnd (AudioProcessor*, int index)
+void NightCapProcessor::audioProcessorParameterChangeGestureEnd (AudioProcessor*, int index)
 {
     if (isPositiveAndBelow (index, (int) hostToProxy.size()) && hostToProxy[(size_t) index] >= 0)
         proxies.getUnchecked (hostToProxy[(size_t) index])->endChangeGesture();
 }
 
 //============================================================================== mapping
-void NocturnAutomapProcessor::loadDefaultMapping()
+void NightCapProcessor::loadDefaultMapping()
 {
     mapping.clear();
     customMapping = false;
@@ -298,26 +298,26 @@ void NocturnAutomapProcessor::loadDefaultMapping()
     }
 }
 
-void NocturnAutomapProcessor::resetMapping()
+void NightCapProcessor::resetMapping()
 {
     loadDefaultMapping();
     mappingFile().deleteFile();
     page = 0;
     displayChanged.sendChangeMessage();
-    nocturnRepaintLeds();
+    hardwareRepaintLeds();
 }
 
-File NocturnAutomapProcessor::mappingFile() const
+File NightCapProcessor::mappingFile() const
 {
     auto name = File::createLegalFileName (hostedDesc.manufacturerName + " - " + hostedDesc.name
                                            + " (" + hostedDesc.pluginFormatName + ")");
-    return PluginCatalog::mappingDir().getChildFile (name + ".automap.xml");
+    return PluginCatalog::mappingDir().getChildFile (name + ".nightcap.xml");
 }
 
-void NocturnAutomapProcessor::saveMappingFile() const
+void NightCapProcessor::saveMappingFile() const
 {
     if (! customMapping || current.load() == nullptr) return;
-    XmlElement xml ("AUTOMAP_MAPPING");
+    XmlElement xml ("NIGHTCAP_MAPPING");
     xml.setAttribute ("plugin", hostedDesc.name);
     xml.setAttribute ("crossfader", xfaderParam);
     StringArray ids;
@@ -327,10 +327,10 @@ void NocturnAutomapProcessor::saveMappingFile() const
     xml.writeTo (mappingFile());
 }
 
-bool NocturnAutomapProcessor::loadMappingFile()
+bool NightCapProcessor::loadMappingFile()
 {
     auto xml = XmlDocument::parse (mappingFile());
-    if (xml == nullptr || ! xml->hasTagName ("AUTOMAP_MAPPING")) return false;
+    if (xml == nullptr || ! xml->hasTagName ("NIGHTCAP_MAPPING")) return false;
     mapping.clear();
     for (auto& s : StringArray::fromTokens (xml->getStringAttribute ("slots"), ",", {}))
         mapping.push_back (s.getIntValue());
@@ -339,19 +339,19 @@ bool NocturnAutomapProcessor::loadMappingFile()
     return true;
 }
 
-int NocturnAutomapProcessor::paramForSlot (int slot) const
+int NightCapProcessor::paramForSlot (int slot) const
 {
     if (slot == xfaderSlot) return xfaderParam;
     const size_t i = (size_t) (page * slotsPerPage + slot);
     return i < mapping.size() ? mapping[i] : -1;
 }
 
-int NocturnAutomapProcessor::getNumPages() const
+int NightCapProcessor::getNumPages() const
 {
     return jmax (1, ((int) mapping.size() + slotsPerPage - 1) / slotsPerPage);
 }
 
-void NocturnAutomapProcessor::setPage (int p)
+void NightCapProcessor::setPage (int p)
 {
     // allow one empty page past the end so you can learn new slots there
     const int maxPage = customMapping || mapping.empty() ? getNumPages() : getNumPages() - 1;
@@ -362,7 +362,7 @@ void NocturnAutomapProcessor::setPage (int p)
     sendLeds (false);
 }
 
-void NocturnAutomapProcessor::setLearnArmed (bool on)
+void NightCapProcessor::setLearnArmed (bool on)
 {
     learnArmed = on;
     learnSlot = on ? lastSlot : -1;
@@ -371,7 +371,7 @@ void NocturnAutomapProcessor::setLearnArmed (bool on)
     sendLeds (false);
 }
 
-NocturnAutomapProcessor::SlotInfo NocturnAutomapProcessor::getSlotInfo (int slot) const
+NightCapProcessor::SlotInfo NightCapProcessor::getSlotInfo (int slot) const
 {
     SlotInfo info;
     if (auto* p = getHostedParam (paramForSlot (slot)))
@@ -386,17 +386,17 @@ NocturnAutomapProcessor::SlotInfo NocturnAutomapProcessor::getSlotInfo (int slot
     return info;
 }
 
-//============================================================================== Nocturn input
-void NocturnAutomapProcessor::setHostedParamFromNocturn (int paramIndex, float v)
+//============================================================================== kNocTurn input
+void NightCapProcessor::setHostedParamFromHardware (int paramIndex, float v)
 {
     if (auto* p = getHostedParam (paramIndex))
     {
-        const ScopedValueSetter<bool> svs (writingFromNocturn, true);
+        const ScopedValueSetter<bool> svs (writingFromHardware, true);
         p->setValueNotifyingHost (jlimit (0.0f, 1.0f, v));
     }
 }
 
-void NocturnAutomapProcessor::beginSlotGesture (int slot)
+void NightCapProcessor::beginSlotGesture (int slot)
 {
     if (gestureOpen[slot]) return;
     if (auto* p = getHostedParam (paramForSlot (slot)))
@@ -406,7 +406,7 @@ void NocturnAutomapProcessor::beginSlotGesture (int slot)
     }
 }
 
-void NocturnAutomapProcessor::endSlotGesture (int slot)
+void NightCapProcessor::endSlotGesture (int slot)
 {
     if (! gestureOpen[slot]) return;
     gestureOpen[slot] = false;
@@ -414,7 +414,7 @@ void NocturnAutomapProcessor::endSlotGesture (int slot)
         p->endChangeGesture();
 }
 
-void NocturnAutomapProcessor::nudgeSlot (int slot, double delta)
+void NightCapProcessor::nudgeSlot (int slot, double delta)
 {
     auto* p = getHostedParam (paramForSlot (slot));
     if (p == nullptr) return;
@@ -436,12 +436,12 @@ void NocturnAutomapProcessor::nudgeSlot (int slot, double delta)
 
     beginSlotGesture (slot);
     lastMove[slot] = Time::getMillisecondCounter();
-    setHostedParamFromNocturn (paramForSlot (slot), (float) (p->getValue() + change));
+    setHostedParamFromHardware (paramForSlot (slot), (float) (p->getValue() + change));
 }
 
-void NocturnAutomapProcessor::nocturnControl (int cc, int value)
+void NightCapProcessor::hardwareControl (int cc, int value)
 {
-    using namespace NocturnCC;
+    using namespace kNocTurnCC;
     const bool pressed = value > 0;
 
     if (cc >= encoderFirst && cc < encoderFirst + slotsPerPage)
@@ -471,7 +471,7 @@ void NocturnAutomapProcessor::nocturnControl (int cc, int value)
     }
     if (cc == speedDial)
     {
-        // fine adjust of the last used encoder (1/10 resolution), like Automap's speed dial
+        // fine adjust of the last used encoder (1/10 resolution), like NightCap's speed dial
         nudgeSlot (lastSlot, relative (value) / 10.0);
         return;
     }
@@ -482,7 +482,7 @@ void NocturnAutomapProcessor::nocturnControl (int cc, int value)
         {
             beginSlotGesture (xfaderSlot);
             lastMove[xfaderSlot] = Time::getMillisecondCounter();
-            setHostedParamFromNocturn (xfaderParam, value / 127.0f);
+            setHostedParamFromHardware (xfaderParam, value / 127.0f);
         }
         return;
     }
@@ -495,7 +495,7 @@ void NocturnAutomapProcessor::nocturnControl (int cc, int value)
     {
         case learn:    setLearnArmed (! learnArmed); break;
         case view:     if (auto* p = getHostedParam (paramForSlot (lastSlot)))
-                           setHostedParamFromNocturn (paramForSlot (lastSlot), p->getDefaultValue());
+                           setHostedParamFromHardware (paramForSlot (lastSlot), p->getDefaultValue());
                        break;
         case pageDown: setPage (page - 1); break;
         case pageUp:   setPage (page + 1); break;
@@ -507,7 +507,7 @@ void NocturnAutomapProcessor::nocturnControl (int cc, int value)
     }
 }
 
-void NocturnAutomapProcessor::handleProgramStep (int step)
+void NightCapProcessor::handleProgramStep (int step)
 {
     if (auto* inst = current.load())
     {
@@ -520,26 +520,26 @@ void NocturnAutomapProcessor::handleProgramStep (int step)
     }
 }
 
-void NocturnAutomapProcessor::nocturnFocusChanged (bool)
+void NightCapProcessor::hardwareFocusChanged (bool)
 {
     for (int s = 0; s <= slotsPerPage; ++s) endSlotGesture (s);
     displayChanged.sendChangeMessage();
 }
 
-void NocturnAutomapProcessor::nocturnRepaintLeds()
+void NightCapProcessor::hardwareRepaintLeds()
 {
     std::fill (std::begin (ledCache), std::end (ledCache), -1);
     sendLeds (true);
 }
 
-void NocturnAutomapProcessor::sendLeds (bool force)
+void NightCapProcessor::sendLeds (bool force)
 {
     if (! link->hasFocus (this)) return;
     auto send = [&] (int cc, int v)
     {
         if (force || ledCache[cc] != v) { ledCache[cc] = v; link->sendCC (this, cc, v); }
     };
-    using namespace NocturnCC;
+    using namespace kNocTurnCC;
     for (int s = 0; s < slotsPerPage; ++s)
     {
         auto* p = getHostedParam (paramForSlot (s));
@@ -558,7 +558,7 @@ void NocturnAutomapProcessor::sendLeds (bool force)
 }
 
 //============================================================================== timer
-void NocturnAutomapProcessor::timerCallback()
+void NightCapProcessor::timerCallback()
 {
     if (focusRequested.exchange (false))
         link->setFocus (this, true);
@@ -596,9 +596,9 @@ void NocturnAutomapProcessor::timerCallback()
 }
 
 //============================================================================== state
-void NocturnAutomapProcessor::getStateInformation (MemoryBlock& dest)
+void NightCapProcessor::getStateInformation (MemoryBlock& dest)
 {
-    XmlElement xml ("NOCTURN_AUTOMAP");
+    XmlElement xml ("NIGHTCAP");
     xml.setAttribute ("version", 1);
     if (auto* inst = current.load())
     {
@@ -618,10 +618,10 @@ void NocturnAutomapProcessor::getStateInformation (MemoryBlock& dest)
     copyXmlToBinary (xml, dest);
 }
 
-void NocturnAutomapProcessor::setStateInformation (const void* data, int size)
+void NightCapProcessor::setStateInformation (const void* data, int size)
 {
     std::shared_ptr<XmlElement> xml (getXmlFromBinary (data, size).release());
-    if (xml == nullptr || ! xml->hasTagName ("NOCTURN_AUTOMAP")) return;
+    if (xml == nullptr || ! xml->hasTagName ("NIGHTCAP")) return;
 
     auto apply = [this, xml]
     {
@@ -631,7 +631,7 @@ void NocturnAutomapProcessor::setStateInformation (const void* data, int size)
         PluginDescription desc;
         if (! desc.loadFromXml (*descXml)) return;
         String err;
-        if (! loadPlugin (desc, err)) { DBG ("Nocturn Automap: could not reload " << desc.name << ": " << err); return; }
+        if (! loadPlugin (desc, err)) { DBG ("kNocTurn NightCap: could not reload " << desc.name << ": " << err); return; }
         if (auto* st = xml->getChildByName ("STATE"))
         {
             MemoryBlock mb;
@@ -652,19 +652,19 @@ void NocturnAutomapProcessor::setStateInformation (const void* data, int size)
         }
         bypassHosted = xml->getBoolAttribute ("bypass", false);
         displayChanged.sendChangeMessage();
-        nocturnRepaintLeds();
+        hardwareRepaintLeds();
     };
 
     if (MessageManager::existsAndIsCurrentThread()) apply();
     else MessageManager::callAsync ([flag = alive, apply] { if (flag->load()) apply(); });
 }
 
-AudioProcessorEditor* NocturnAutomapProcessor::createEditor()
+AudioProcessorEditor* NightCapProcessor::createEditor()
 {
-    return new NocturnAutomapEditor (*this);
+    return new NightCapEditor (*this);
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new NocturnAutomapProcessor();
+    return new NightCapProcessor();
 }

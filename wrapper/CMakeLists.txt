@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(NocturnAutomap VERSION 1.0.0)
+project(NightCap VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "")
@@ -15,24 +15,24 @@ else()
 endif()
 
 if(APPLE)
-    set(AUTOMAP_FORMATS AU VST3)
+    set(NIGHTCAP_FORMATS AU VST3)
 else()
-    set(AUTOMAP_FORMATS VST3)
+    set(NIGHTCAP_FORMATS VST3)
 endif()
 
-set(AUTOMAP_SOURCES
-    Source/NocturnLink.cpp
+set(NIGHTCAP_SOURCES
+    Source/kNocTurnLink.cpp
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp)
 
-function(automap_target target name code is_synth au_type)
+function(nightcap_target target name code is_synth au_type)
     juce_add_plugin(${target}
         PRODUCT_NAME "${name}"
-        COMPANY_NAME "Nocturn Automap"
-        BUNDLE_ID "com.nocturnautomap.${target}"
-        PLUGIN_MANUFACTURER_CODE Nctn
+        COMPANY_NAME "digitui"
+        BUNDLE_ID "com.digitui.${target}"
+        PLUGIN_MANUFACTURER_CODE Dgtu
         PLUGIN_CODE ${code}
-        FORMATS ${AUTOMAP_FORMATS}
+        FORMATS ${NIGHTCAP_FORMATS}
         IS_SYNTH ${is_synth}
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT TRUE
@@ -40,7 +40,7 @@ function(automap_target target name code is_synth au_type)
         VST3_CATEGORIES Fx Instrument
         COPY_PLUGIN_AFTER_BUILD TRUE
         MICROPHONE_PERMISSION_ENABLED FALSE)
-    target_sources(${target} PRIVATE ${AUTOMAP_SOURCES})
+    target_sources(${target} PRIVATE ${NIGHTCAP_SOURCES})
     target_compile_definitions(${target} PUBLIC
         JUCE_PLUGINHOST_AU=1
         JUCE_PLUGINHOST_VST3=1
@@ -59,5 +59,5 @@ function(automap_target target name code is_synth au_type)
         juce::juce_recommended_warning_flags)
 endfunction()
 
-automap_target(NocturnAutomap   "Nocturn Automap"    Ncai TRUE  kAudioUnitType_MusicDevice)
-automap_target(NocturnAutomapFX "Nocturn Automap FX" Ncaf FALSE kAudioUnitType_MusicEffect)
+nightcap_target(NightCap   "kNocTurn NightCap"    Ngti TRUE  kAudioUnitType_MusicDevice)
+nightcap_target(NightCapFX "kNocTurn NightCap FX" Ngtf FALSE kAudioUnitType_MusicEffect)

@@ -15,7 +15,7 @@ struct PluginCatalog
     static juce::File dataDir()
     {
         return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
-                   .getChildFile ("Application Support").getChildFile ("NocturnAutomap");
+                   .getChildFile ("Application Support").getChildFile ("NightCap");
     }
     static juce::File listFile()       { return dataDir().getChildFile ("plugins.xml"); }
     static juce::File deadMansPedal()  { return dataDir().getChildFile ("scanning.tmp"); }
@@ -25,7 +25,7 @@ struct PluginCatalog
     {
         // never offer ourselves as something to wrap
         for (auto& t : list.getTypes())
-            if (t.name.startsWithIgnoreCase ("Nocturn Automap"))
+            if (t.name.startsWithIgnoreCase ("kNocTurn NightCap"))
                 list.removeType (t);
         if (auto xml = list.createXml())
             xml->writeTo (listFile());

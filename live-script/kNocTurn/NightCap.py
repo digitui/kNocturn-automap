@@ -1,10 +1,10 @@
 """
-Native Automap for Ableton Live - controls any device (Live devices, VST, AU) directly,
+Native NightCap for Ableton Live - controls any device (Live devices, VST, AU) directly,
 no wrapper plug-in needed.
 
  * Every parameter of the controlled device is laid out in pages of 8 knobs
    (Live's own curated banks first for Live devices, then everything else).
- * Learn: press Learn, touch a Nocturn knob (or move the crossfader), then move a control
+ * Learn: press Learn, touch a kNocTurn knob (or move the crossfader), then move a control
    in the plug-in's own window. The mapping is saved per plug-in and reused next time.
  * Speed dial fine-adjusts the last knob you touched. View resets it to its default.
  * Names / values are shown in Live's status bar; LED rings follow the parameter values.
@@ -31,7 +31,7 @@ def _norm(param):
     return 0.0 if span == 0 else (param.value - param.min) / span
 
 
-class NativeAutomap(object):
+class NightCapEngine(object):
 
     def __init__(self, surface, encoders, crossfader):
         self._surface = surface
@@ -153,7 +153,7 @@ class NativeAutomap(object):
         self._watch_for_learn(self._learn)
         self._connect()
         if self._learn:
-            self._message('LEARN: touch a Nocturn knob (or move the crossfader), then move a control in the plug-in')
+            self._message('LEARN: touch a kNocTurn knob (or move the crossfader), then move a control in the plug-in')
         else:
             self._show_page()
         self._hud(True)
@@ -364,7 +364,7 @@ class NativeAutomap(object):
         self._rebuild_pages()
         self._message('Learned: %s -> %s' % (param.name, 'crossfader' if slot == XFADER else 'knob %d' % (slot + 1)))
         self._hud(True)
-        self._surface.automap_state_changed()
+        self._surface.nightcap_state_changed()
 
     # ------------------------------------------------------------------ persistence
     def _device_key(self):
@@ -393,7 +393,7 @@ class NativeAutomap(object):
             with open(self._mapping_file(), 'w') as f:
                 json.dump(self._custom, f, indent=1)
         except Exception as e:
-            self._surface.log_message('Nocturn: could not save mapping: %s' % e)
+            self._surface.log_message('kNocTurn: could not save mapping: %s' % e)
 
     # ------------------------------------------------------------------ HUD
     def _hud(self, pop):
@@ -414,7 +414,7 @@ class NativeAutomap(object):
             title = '?'
         if self._locked:
             title += '  [locked]'
-        sub = 'Custom mapping' if self._custom is not None else 'Automap'
+        sub = 'Custom mapping' if self._custom is not None else 'NightCap'
         return {'t': title,
                 'p': 'Page %d / %d' % (self._page + 1, self.num_pages),
                 'sub': sub + '   -   Learn: press Learn, touch a knob, move a control in the plug-in',
@@ -446,4 +446,4 @@ class NativeAutomap(object):
                                                  self._page + 1, self.num_pages, '  '.join(names)))
 
     def _message(self, text):
-        self._surface.show_message('Nocturn: ' + text)
+        self._surface.show_message('kNocTurn: ' + text)

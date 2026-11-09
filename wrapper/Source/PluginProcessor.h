@@ -1,16 +1,16 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_devices/juce_audio_devices.h>
-#include "NocturnLink.h"
+#include "kNocTurnLink.h"
 #include "PluginCatalog.h"
 
-class NocturnAutomapProcessor;
+class NightCapProcessor;
 
 /** Exposes one parameter of the hosted plug-in to the DAW (automation, Live device view). */
 class ProxyParameter : public juce::AudioProcessorParameter
 {
 public:
-    ProxyParameter (NocturnAutomapProcessor& o, int i) : owner (o), index (i) {}
+    ProxyParameter (NightCapProcessor& o, int i) : owner (o), index (i) {}
     float getValue() const override;
     void setValue (float) override;
     float getDefaultValue() const override;
@@ -20,12 +20,12 @@ public:
     float getValueForText (const juce::String&) const override;
     bool isAutomatable() const override { return true; }
 private:
-    NocturnAutomapProcessor& owner;
+    NightCapProcessor& owner;
     const int index;
     float cached = 0.0f;
 };
 
-/** Set by the Live remote script on the selected wrapper to give it the Nocturn. */
+/** Set by the Live remote script on the selected wrapper to give it the kNocTurn. */
 class FocusParameter : public juce::AudioProcessorParameter
 {
 public:
@@ -33,7 +33,7 @@ public:
     float getValue() const override { return value; }
     void setValue (float v) override { const bool on = v > 0.5f; if (on && value <= 0.5f) flag = true; value = v; }
     float getDefaultValue() const override { return 0.0f; }
-    juce::String getName (int maxLen) const override { return juce::String ("Automap Focus").substring (0, maxLen); }
+    juce::String getName (int maxLen) const override { return juce::String ("NightCap Focus").substring (0, maxLen); }
     juce::String getLabel() const override { return {}; }
     juce::String getText (float v, int) const override { return v > 0.5f ? "On" : "Off"; }
     float getValueForText (const juce::String& t) const override { return t.equalsIgnoreCase ("On") ? 1.0f : 0.0f; }
@@ -45,8 +45,8 @@ private:
     float value = 0.0f;
 };
 
-class NocturnAutomapProcessor : public juce::AudioProcessor,
-                                public NocturnClient,
+class NightCapProcessor : public juce::AudioProcessor,
+                                public kNocTurnClient,
                                 private juce::AudioProcessorListener,
                                 private juce::Timer
 {
@@ -55,8 +55,8 @@ public:
     static constexpr int slotsPerPage = 8;
     static constexpr int xfaderSlot = slotsPerPage;
 
-    NocturnAutomapProcessor();
-    ~NocturnAutomapProcessor() override;
+    NightCapProcessor();
+    ~NightCapProcessor() override;
 
     // AudioProcessor
     void prepareToPlay (double, int) override;
@@ -88,7 +88,7 @@ public:
     juce::ChangeBroadcaster hostedChanged;   // editor rebuilds hosted UI
     juce::ChangeBroadcaster displayChanged;  // page/learn/touch changed
 
-    // Automap model
+    // NightCap model
     struct SlotInfo { bool mapped = false; juce::String name, value; float norm = 0.0f; };
     SlotInfo getSlotInfo (int slot) const;      // slot 0..7, or xfaderSlot
     int getPage() const noexcept { return page; }
@@ -100,17 +100,17 @@ public:
     void setLearnSlot (int s) { learnSlot = s; displayChanged.sendChangeMessage(); }
     int getTouchedSlot() const noexcept { return touchedSlot; }
     void resetMapping();                         // back to "all parameters in order"
-    void claimNocturn()                          { link->setFocus (this, true); }
-    void releaseNocturn()                        { link->releaseToDaw(); }
-    bool hasNocturnFocus() const                 { return link->hasFocus (this); }
-    NocturnLink& getLink()                       { return *link; }
+    void claimHardware()                          { link->setFocus (this, true); }
+    void releaseHardware()                        { link->releaseToDaw(); }
+    bool hasHardwareFocus() const                 { return link->hasFocus (this); }
+    kNocTurnLink& getLink()                       { return *link; }
     PluginCatalog& getCatalog()                  { return *catalog; }
 
-    // NocturnClient
-    void nocturnControl (int cc, int value) override;
-    void nocturnFocusChanged (bool) override;
-    void nocturnRepaintLeds() override;
-    juce::String nocturnClientName() const override { return getHostedName(); }
+    // kNocTurnClient
+    void hardwareControl (int cc, int value) override;
+    void hardwareFocusChanged (bool) override;
+    void hardwareRepaintLeds() override;
+    juce::String hardwareClientName() const override { return getHostedName(); }
 
 private:
     // AudioProcessorListener (hosted plug-in)
@@ -125,7 +125,7 @@ private:
     void nudgeSlot (int slot, double delta);
     void beginSlotGesture (int slot);
     void endSlotGesture (int slot);
-    void setHostedParamFromNocturn (int paramIndex, float v);
+    void setHostedParamFromHardware (int paramIndex, float v);
     void prepareHosted (juce::AudioPluginInstance&);
     void configureBuses (juce::AudioPluginInstance&);
     void loadDefaultMapping();
@@ -135,7 +135,7 @@ private:
     void sendLeds (bool force);
     void handleProgramStep (int step);
 
-    juce::SharedResourcePointer<NocturnLink> link;
+    juce::SharedResourcePointer<kNocTurnLink> link;
     juce::SharedResourcePointer<PluginCatalog> catalog;
 
     std::unique_ptr<juce::AudioPluginInstance> owned;
@@ -164,7 +164,7 @@ private:
     int touchedSlot = -1;
     int lastSlot = 0;
     std::atomic<int> lastUiParam { -1 };
-    bool writingFromNocturn = false;
+    bool writingFromHardware = false;
     double accum[slotsPerPage + 1] {};
     juce::uint32 lastMove[slotsPerPage + 1] {};
     bool gestureOpen[slotsPerPage + 1] {};
@@ -172,5 +172,5 @@ private:
     int ledCache[128];
     std::shared_ptr<std::atomic<bool>> alive = std::make_shared<std::atomic<bool>> (true);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NocturnAutomapProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NightCapProcessor)
 };

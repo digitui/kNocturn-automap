@@ -23,24 +23,24 @@ private:
 class SlotDisplay : public juce::Component
 {
 public:
-    void set (const NocturnAutomapProcessor::SlotInfo& i, int number, bool touched, bool learnTarget);
+    void set (const NightCapProcessor::SlotInfo& i, int number, bool touched, bool learnTarget);
     void paint (juce::Graphics&) override;
     std::function<void()> onClick;
     void mouseDown (const juce::MouseEvent&) override { if (onClick) onClick(); }
 private:
-    NocturnAutomapProcessor::SlotInfo info;
+    NightCapProcessor::SlotInfo info;
     juce::String caption;
     bool touched = false, learnTarget = false;
 };
 
-class NocturnAutomapEditor : public juce::AudioProcessorEditor,
+class NightCapEditor : public juce::AudioProcessorEditor,
                              private juce::ChangeListener,
                              private juce::ComponentListener,
                              private juce::Timer
 {
 public:
-    explicit NocturnAutomapEditor (NocturnAutomapProcessor&);
-    ~NocturnAutomapEditor() override;
+    explicit NightCapEditor (NightCapProcessor&);
+    ~NightCapEditor() override;
     void paint (juce::Graphics&) override;
     void resized() override;
     void mouseDown (const juce::MouseEvent&) override;
@@ -55,15 +55,15 @@ private:
     void showPluginMenu();
     void updateSize();
 
-    NocturnAutomapProcessor& proc;
+    NightCapProcessor& proc;
     PluginScanner scanner;
     std::unique_ptr<juce::AudioProcessorEditor> hostedEditor;
 
     juce::TextButton loadButton { "Load plug-in..." }, learnButton { "Learn" },
-                     prevPage { "<" }, nextPage { ">" }, focusButton { "Take Nocturn" },
+                     prevPage { "<" }, nextPage { ">" }, focusButton { "Take kNocTurn" },
                      menuButton { "..." };
     juce::Label pluginName, pageLabel, statusLabel;
-    SlotDisplay slots[NocturnAutomapProcessor::slotsPerPage + 1];
+    SlotDisplay slots[NightCapProcessor::slotsPerPage + 1];
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NocturnAutomapEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NightCapEditor)
 };

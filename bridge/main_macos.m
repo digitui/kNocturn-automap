@@ -1,14 +1,14 @@
 /*
- * NocturnBridge - native Apple Silicon / Intel driver for the Novation Nocturn.
+ * kNocTurnBridge - native Apple Silicon / Intel driver for the Novation Nocturn controller.
  *
- * Replaces the 32-bit AutomapServer USB layer. Talks to the Nocturn with
+ * Replaces the 32-bit the original 32-bit server USB layer. Talks to the kNocTurn with
  * user-space IOKit (no kext needed) and exposes it as a CoreMIDI device:
- *   "Nocturn"          (source + destination) - for your DAW / the Live remote script
- *   "Nocturn Automap"  (source + destination) - for the Nocturn Automap wrapper plug-ins
- * Only one port pair owns the hardware at a time; switch with SysEx F0 00 20 29 7F 01 <0|1> F7.
+ *   "kNocTurn"          (source + destination) - for your DAW / the Live remote script
+ *   "kNocTurn NightCap"  (source + destination) - for the kNocTurn NightCap wrapper plug-ins
+ * Only one port pair owns the hardware at a time; switch with SysEx F0 7D 4B 4E 43 01 <0|1> F7.
  *
- * Also shows the Automap HUD: a floating panel with the names/values of the 8 knobs, fed by the
- * Live remote script over SysEx (F0 00 20 29 7F 10 <chunk> <total> <ascii json...> F7).
+ * Also shows the NightCap HUD: a floating panel with the names/values of the 8 knobs, fed by the
+ * Live remote script over SysEx (F0 7D 4B 4E 43 10 <chunk> <total> <ascii json...> F7).
  *
  * Build:  sh build.sh      (needs Xcode Command Line Tools only)
  */
@@ -26,9 +26,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "nocturn_core.h"
+#include "knocturn_core.h"
 
-#define LOG(...) do { fprintf(stderr, "[nocturn] " __VA_ARGS__); fputc('\n', stderr); } while (0)
+#define LOG(...) do { fprintf(stderr, "[knocturn] " __VA_ARGS__); fputc('\n', stderr); } while (0)
 
 typedef IOUSBDeviceInterface650    **DevIf;
 typedef IOUSBInterfaceInterface650 **IntfIf;
@@ -57,9 +57,9 @@ static struct {
 
 static void hud_deliver(NSData *json);   /* main-thread HUD update, defined below */
 
-/* HUD SysEx: F0 00 20 29 7F 10 <chunk index> <chunk count> <data...> F7 */
+/* HUD SysEx: F0 7D 4B 4E 43 10 <chunk index> <chunk count> <data...> F7 */
 static int handle_hud_sysex(const uint8_t *m, size_t n) {
-    if (n < 9 || m[1] != 0x00 || m[2] != 0x20 || m[3] != 0x29 || m[4] != 0x7F || m[5] != 0x10) return 0;
+    if (n < 9 || m[1] != 0x7D || m[2] != 0x4B || m[3] != 0x4E || m[4] != 0x43 || m[5] != 0x10) return 0;
     int idx = m[6], total = m[7];
     const uint8_t *data = m + 8;
     size_t dlen = n - 9;                                   /* minus trailing F7 */
@@ -86,7 +86,7 @@ static void usb_write_cb(void *ctx, const uint8_t *data, size_t len) {
     if (!G.intf || !G.connected) return;
     IOReturn r = (*G.intf)->WritePipe(G.intf, G.pipe_out, (void *)data, (UInt32)len);
     if (G.verbose) {
-        fprintf(stderr, "[nocturn] usb out:");
+        fprintf(stderr, "[knocturn] usb out:");
         for (size_t i = 0; i < len; i++) fprintf(stderr, " %02X", data[i]);
         fprintf(stderr, r ? "  (err 0x%08x)\n" : "\n", r);
     }
@@ -104,14 +104,14 @@ static void midi_out_cb(void *ctx, int port, uint8_t cc, uint8_t value) {
     (void)ctx;
     Byte msg[3] = { (Byte)(0xB0 | G.channel), cc, value };
     send_to_port(port, msg, 3);
-    if (G.verbose) LOG("midi out [%s]: CC %d = %d", port ? "automap" : "main", cc, value);
+    if (G.verbose) LOG("midi out [%s]: CC %d = %d", port ? "nightcap" : "main", cc, value);
 }
 
 static void mode_changed_cb(void *ctx, int port) {
     (void)ctx;
-    Byte msg[8] = { 0xF0, 0x00, 0x20, 0x29, 0x7F, NC_SYSEX_MODE_IS, (Byte)port, 0xF7 };
+    Byte msg[8] = { 0xF0, 0x7D, 0x4B, 0x4E, 0x43, NC_SYSEX_MODE_IS, (Byte)port, 0xF7 };
     for (int p = 0; p < NC_NUM_PORTS; p++) send_to_port(p, msg, 8);
-    LOG("hardware now controls: %s", port ? "Automap wrapper" : "DAW / Live");
+    LOG("hardware now controls: %s", port ? "NightCap wrapper" : "DAW / Live");
 }
 
 /* ---------- MIDI from DAW -> LEDs ---------- */
@@ -162,7 +162,7 @@ static void *reader_main(void *arg) {
             continue;
         }
         if (G.verbose) {
-            fprintf(stderr, "[nocturn] usb in :");
+            fprintf(stderr, "[knocturn] usb in :");
             for (UInt32 i = 0; i < n; i++) fprintf(stderr, " %02X", buf[i]);
             fputc('\n', stderr);
         }
@@ -181,7 +181,7 @@ static void close_device(void) {
     if (G.reader) { pthread_join(G.reader, NULL); G.reader = 0; }
     if (G.intf) { (*G.intf)->USBInterfaceClose(G.intf); (*G.intf)->Release(G.intf); G.intf = NULL; }
     if (G.dev)  { (*G.dev)->USBDeviceClose(G.dev);     (*G.dev)->Release(G.dev);   G.dev = NULL; }
-    LOG("Nocturn disconnected");
+    LOG("kNocTurn disconnected");
 }
 
 static int open_device(io_service_t service) {
@@ -194,12 +194,12 @@ static int open_device(io_service_t service) {
 
     IOReturn r = (*G.dev)->USBDeviceOpen(G.dev);
     if (r == kIOReturnExclusiveAccess) {
-        LOG("device is held by another process (old Automap/driver?) - seizing");
+        LOG("device is held by another process (old Novation software/driver?) - seizing");
         r = (*G.dev)->USBDeviceOpenSeize(G.dev);
     }
     if (r) { LOG("USBDeviceOpen failed 0x%08x", r); (*G.dev)->Release(G.dev); G.dev = NULL; return -1; }
 
-    /* Same as NovationDevice ctor: select configuration 1 (first descriptor) */
+    /* Same as the original driver: select configuration 1 (first descriptor) */
     IOUSBConfigurationDescriptorPtr cd;
     if ((*G.dev)->GetConfigurationDescriptorPtr(G.dev, 0, &cd) == kIOReturnSuccess)
         (*G.dev)->SetConfiguration(G.dev, cd->bConfigurationValue);
@@ -241,7 +241,7 @@ static int open_device(io_service_t service) {
     nc_set_mode(&G.core, G.core.mode);              /* repaint LEDs of the active port */
     pthread_mutex_unlock(&G.lock);
     pthread_create(&G.reader, NULL, reader_main, NULL);
-    LOG("Nocturn connected (in pipe %d, out pipe %d)", G.pipe_in, G.pipe_out);
+    LOG("kNocTurn connected (in pipe %d, out pipe %d)", G.pipe_in, G.pipe_out);
     return 0;
 }
 
@@ -411,16 +411,16 @@ typedef NS_ENUM(NSInteger, HudMode) { HudAuto = 0, HudAlways = 1, HudOff = 2 };
 
     _statusItem = [NSStatusBar.systemStatusBar statusItemWithLength:NSVariableStatusItemLength];
     NSImage *img = nil;
-    if (@available(macOS 11.0, *)) img = [NSImage imageWithSystemSymbolName:@"dial.medium" accessibilityDescription:@"Nocturn"];
+    if (@available(macOS 11.0, *)) img = [NSImage imageWithSystemSymbolName:@"dial.medium" accessibilityDescription:@"kNocTurn"];
     if (img) { img.template = YES; _statusItem.button.image = img; } else _statusItem.button.title = @"N";
-    _statusItem.button.toolTip = @"NocturnBridge";
+    _statusItem.button.toolTip = @"kNocTurnBridge";
     [self rebuildMenu];
     return self;
 }
 
 - (void)rebuildMenu {
     NSMenu *m = [NSMenu new];
-    [m addItemWithTitle:G.connected ? @"Nocturn connected" : @"Nocturn not connected" action:nil keyEquivalent:@""];
+    [m addItemWithTitle:G.connected ? @"kNocTurn connected" : @"kNocTurn not connected" action:nil keyEquivalent:@""];
     [m addItem:NSMenuItem.separatorItem];
     NSArray *titles = @[ @"HUD: show when touched", @"HUD: always visible", @"HUD: off" ];
     for (NSInteger i = 0; i < 3; i++) {
@@ -432,7 +432,7 @@ typedef NS_ENUM(NSInteger, HudMode) { HudAuto = 0, HudAlways = 1, HudOff = 2 };
     NSMenuItem *reset = [m addItemWithTitle:@"Reset HUD position" action:@selector(resetPosition:) keyEquivalent:@""];
     reset.target = self;
     [m addItem:NSMenuItem.separatorItem];
-    [m addItemWithTitle:@"Quit NocturnBridge" action:@selector(terminate:) keyEquivalent:@"q"];
+    [m addItemWithTitle:@"Quit kNocTurnBridge" action:@selector(terminate:) keyEquivalent:@"q"];
     m.delegate = self;
     self.statusItem.menu = m;
 }
@@ -524,12 +524,12 @@ static void hud_deliver(NSData *json) {
 }
 
 static void usage(const char *a) {
-    printf("NocturnBridge - Novation Nocturn driver for Apple Silicon\n\n"
+    printf("kNocTurnBridge - driver for the Novation Nocturn controller on Apple Silicon\n\n"
            "usage: %s [options]\n"
            "  -c N      MIDI channel 1-16 (default 1)\n"
-           "  -n NAME   MIDI port base name (default \"Nocturn\")\n"
+           "  -n NAME   MIDI port base name (default \"kNocTurn\")\n"
            "  -A        plain MIDI-learn mode: absolute encoders 0-127 with local LED rings\n"
-           "            (default is relative encoders + DAW-driven LEDs, for the Live script / Automap)\n"
+           "            (default is relative encoders + DAW-driven LEDs, for the Live script / NightCap)\n"
            "  -t        buttons toggle on/off instead of momentary\n"
            "  -a        disable encoder acceleration\n"
            "  -H        no HUD / menu-bar icon (headless)\n"
@@ -538,7 +538,7 @@ static void usage(const char *a) {
 
 int main(int argc, char **argv) {
     nc_config cfg = { .absolute_encoders = 0, .toggle_buttons = 0, .local_feedback = 0, .acceleration = 1 };
-    const char *name = "Nocturn";
+    const char *name = "kNocTurn";
     int opt;
     G.channel = 0;
     while ((opt = getopt(argc, argv, "c:n:AtaHvh")) != -1) {
@@ -560,8 +560,8 @@ int main(int argc, char **argv) {
         gHud = [HudController new];
         /* startup self-test: show the HUD for a few seconds so it's obvious it works */
         dispatch_async(dispatch_get_main_queue(), ^{
-            [gHud update:@{ @"t": @"NocturnBridge HUD ready", @"p": @"",
-                            @"sub": @"Touch a Nocturn knob in Ableton Live to see its parameters here. Drag this panel to move it.",
+            [gHud update:@{ @"t": @"kNocTurnBridge HUD ready", @"p": @"",
+                            @"sub": @"Touch a kNocTurn knob in Ableton Live to see its parameters here. Drag this panel to move it.",
                             @"s": @[], @"touch": @(-1), @"pop": @NO }];
             [gHud showFor:5.0];
         });
@@ -570,20 +570,20 @@ int main(int argc, char **argv) {
     nc_init(&G.core, &cfg, usb_write_cb, midi_out_cb, NULL);
     G.core.mode_changed = mode_changed_cb;
 
-    OSStatus st = MIDIClientCreate(CFSTR("NocturnBridge"), NULL, NULL, &G.client);
+    OSStatus st = MIDIClientCreate(CFSTR("kNocTurnBridge"), NULL, NULL, &G.client);
     for (int p = 0; p < NC_NUM_PORTS && !st; p++) {
         char full[128];
-        snprintf(full, sizeof full, p ? "%s Automap" : "%s", name);
+        snprintf(full, sizeof full, p ? "%s NightCap" : "%s", name);
         CFStringRef cname = CFStringCreateWithCString(NULL, full, kCFStringEncodingUTF8);
         st = MIDISourceCreate(G.client, cname, &G.src[p]);
         if (!st) st = MIDIDestinationCreate(G.client, cname, midi_in_proc, (void *)(intptr_t)p, &G.dst[p]);
         CFRelease(cname);
         if (st) break;
         /* stable unique IDs so DAWs remember the ports across launches */
-        MIDIObjectSetIntegerProperty(G.src[p], kMIDIPropertyUniqueID, 0x4E4F4331 + 2 * p);
-        MIDIObjectSetIntegerProperty(G.dst[p], kMIDIPropertyUniqueID, 0x4E4F4332 + 2 * p);
-        MIDIObjectSetStringProperty(G.src[p], kMIDIPropertyManufacturer, CFSTR("Novation"));
-        MIDIObjectSetStringProperty(G.dst[p], kMIDIPropertyManufacturer, CFSTR("Novation"));
+        MIDIObjectSetIntegerProperty(G.src[p], kMIDIPropertyUniqueID, 0x4B4E5431 + 2 * p);
+        MIDIObjectSetIntegerProperty(G.dst[p], kMIDIPropertyUniqueID, 0x4B4E5432 + 2 * p);
+        MIDIObjectSetStringProperty(G.src[p], kMIDIPropertyManufacturer, CFSTR("digitui"));
+        MIDIObjectSetStringProperty(G.dst[p], kMIDIPropertyManufacturer, CFSTR("digitui"));
     }
     if (st) { LOG("CoreMIDI setup failed (%d)", (int)st); return 1; }
 
@@ -592,14 +592,14 @@ int main(int argc, char **argv) {
     G.notify = IONotificationPortCreate(kIOMainPortDefault);
     CFRunLoopAddSource(CFRunLoopGetMain(), IONotificationPortGetRunLoopSource(G.notify), kCFRunLoopCommonModes);
     CFMutableDictionaryRef match = IOServiceMatching(kIOUSBDeviceClassName);
-    int vid = NOCTURN_VID, pid = NOCTURN_PID;
+    int vid = NC_DEVICE_VID, pid = NC_DEVICE_PID;
     CFNumberRef v = CFNumberCreate(NULL, kCFNumberIntType, &vid), p = CFNumberCreate(NULL, kCFNumberIntType, &pid);
     CFDictionarySetValue(match, CFSTR(kUSBVendorID), v);
     CFDictionarySetValue(match, CFSTR(kUSBProductID), p);
     CFRelease(v); CFRelease(p);
     io_iterator_t added;
     IOServiceAddMatchingNotification(G.notify, kIOFirstMatchNotification, match, device_added, NULL, &added);
-    LOG("MIDI ports \"%s\" and \"%s Automap\" ready on channel %d - waiting for Nocturn...", name, name, G.channel + 1);
+    LOG("MIDI ports \"%s\" and \"%s NightCap\" ready on channel %d - waiting for kNocTurn...", name, name, G.channel + 1);
     device_added(NULL, added);   /* handle already-plugged device */
 
     [NSApp run];
